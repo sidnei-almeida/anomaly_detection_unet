@@ -5,7 +5,7 @@ import logging
 import os
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
 import cv2
 import numpy as np
@@ -153,7 +153,16 @@ def predict(model: UNet, config: Dict[str, Any], image: Image.Image) -> Dict[str
         anomaly_map_scaled, pixel_threshold, 255, cv2.THRESH_BINARY
     )
 
-    return {
+    bounding_boxes, mask_boxes = extract_bounding_boxes(
+        results={
+            "original_image": image,
+            "anomaly_map_scaled": anomaly_map_scaled,
+            "binary_mask": binary_mask,
+        },
+        config=config,
+    )
+
+    results_dict = {
         "prediction": prediction_text,
         "error": error.item(),
         "original_image": image,
@@ -161,7 +170,20 @@ def predict(model: UNet, config: Dict[str, Any], image: Image.Image) -> Dict[str
         "anomaly_map_scaled": anomaly_map_scaled,
         "binary_mask": binary_mask,
         "pixel_threshold": pixel_threshold,
+        "bounding_boxes": bounding_boxes,
+        "detections": [
+            {
+                "label": box["label"],
+                "confidence": box["score"],
+                "box": box["normalized_box"],
+                "normalized": True,
+            }
+            for box in bounding_boxes
+        ],
+        "mask_boxes": mask_boxes,
     }
+
+    return results_dict
 
 # --------------------------------------------------------------------------
 # 4. FUNÇÕES DE VISUALIZAÇÃO
@@ -197,36 +219,21 @@ def display_bounding_box(results: Dict[str, Any], config: Dict[str, Any]) -> Ima
     original_resized = results["original_image"].resize((256, 256))
     original_np = np.array(original_resized)
 
-    bounding_box_threshold = float(config.get("bounding_box_threshold", 1.5))
-    _, sensitive_mask = cv2.threshold(
-        results["anomaly_map_scaled"],
-        bounding_box_threshold,
-        255,
-        cv2.THRESH_BINARY,
-    )
+    mask_boxes: Sequence[Tuple[int, int, int, int]] = results.get("mask_boxes", [])
 
-    dilation_iterations = int(config.get("dilation_iterations", 2))
-    kernel = np.ones((3, 3), np.uint8)
-    sensitive_mask = cv2.dilate(sensitive_mask, kernel, iterations=dilation_iterations)
-
-    contours, _ = cv2.findContours(
-        sensitive_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-    )
+    if not mask_boxes:
+        _, mask_boxes = extract_bounding_boxes(
+            {
+                "original_image": results["original_image"],
+                "anomaly_map_scaled": results["anomaly_map_scaled"],
+                "binary_mask": results["binary_mask"],
+            },
+            config,
+        )
 
     result_image = original_np.copy()
 
-    if contours:
-        largest_contour = max(contours, key=cv2.contourArea)
-        x, y, w, h = cv2.boundingRect(largest_contour)
-
-        margin_x = int(w * 0.15)
-        margin_y = int(h * 0.15)
-
-        x_start = max(0, x - margin_x)
-        y_start = max(0, y - margin_y)
-        x_end = min(256, x + w + margin_x)
-        y_end = min(256, y + h + margin_y)
-
+    for x_start, y_start, x_end, y_end in mask_boxes:
         cv2.rectangle(result_image, (x_start, y_start), (x_end, y_end), (0, 194, 255), 2)
         cv2.putText(
             result_image,
@@ -241,4 +248,85 @@ def display_bounding_box(results: Dict[str, Any], config: Dict[str, Any]) -> Ima
 
     result_rgb = cv2.cvtColor(result_image, cv2.COLOR_BGR2RGB)
     return Image.fromarray(result_rgb)
+
+
+def extract_bounding_boxes(
+    results: Dict[str, Any], config: Dict[str, Any]
+) -> Tuple[List[Dict[str, Any]], List[Tuple[int, int, int, int]]]:
+    """
+    Extract bounding boxes from the anomaly map and return both pixel boxes and
+    mask-space coordinates (for internal use).
+    """
+    original_image: Image.Image = results["original_image"]
+    mask = results["anomaly_map_scaled"]
+
+    width_orig, height_orig = original_image.size
+    scale_x = width_orig / 256.0
+    scale_y = height_orig / 256.0
+
+    bounding_box_threshold = float(config.get("bounding_box_threshold", 1.5))
+    _, sensitive_mask = cv2.threshold(
+        mask,
+        bounding_box_threshold,
+        255,
+        cv2.THRESH_BINARY,
+    )
+
+    dilation_iterations = int(config.get("dilation_iterations", 2))
+    kernel = np.ones((3, 3), np.uint8)
+    sensitive_mask = cv2.dilate(sensitive_mask, kernel, iterations=dilation_iterations)
+
+    contours, _ = cv2.findContours(
+        sensitive_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
+
+    boxes: List[Dict[str, Any]] = []
+    mask_boxes: List[Tuple[int, int, int, int]] = []
+
+    for contour in contours:
+        x, y, w, h = cv2.boundingRect(contour)
+
+        margin_x = int(w * 0.15)
+        margin_y = int(h * 0.15)
+
+        x_start = max(0, x - margin_x)
+        y_start = max(0, y - margin_y)
+        x_end = min(256, x + w + margin_x)
+        y_end = min(256, y + h + margin_y)
+
+        mask_boxes.append((x_start, y_start, x_end, y_end))
+
+        xmin = int(x_start * scale_x)
+        ymin = int(y_start * scale_y)
+        xmax = int(x_end * scale_x)
+        ymax = int(y_end * scale_y)
+
+        width = xmax - xmin
+        height = ymax - ymin
+
+        crop = mask[y_start:y_end, x_start:x_end]
+        score = float(np.clip(crop.mean() / 255.0, 0.0, 1.0)) if crop.size else 0.0
+
+        boxes.append(
+            {
+                "label": "Anomaly",
+                "score": score,
+                "xmin": xmin,
+                "ymin": ymin,
+                "xmax": xmax,
+                "ymax": ymax,
+                "width": width,
+                "height": height,
+                "box": [xmin, ymin, xmax, ymax],
+                "normalized_box": [
+                    xmin / width_orig if width_orig else 0.0,
+                    ymin / height_orig if height_orig else 0.0,
+                    width / width_orig if width_orig else 0.0,
+                    height / height_orig if height_orig else 0.0,
+                ],
+                "normalized": False,
+            }
+        )
+
+    return boxes, mask_boxes
 

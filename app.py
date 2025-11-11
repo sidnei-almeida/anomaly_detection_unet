@@ -133,6 +133,8 @@ async def infer(
         },
         "latency_ms": round(latency_ms, 3),
         "image_size": {"width": image.width, "height": image.height},
+        "bounding_boxes": results.get("bounding_boxes", []),
+        "detections": results.get("detections", []),
     }
 
     if include_visualizations:
@@ -164,6 +166,9 @@ async def infer(
                 "data": _encode_image(bbox_image),
             },
         }
+
+    # Remove internal-only metadata to avoid leaking implementation details
+    results.pop("mask_boxes", None)
 
     return JSONResponse(payload)
 
