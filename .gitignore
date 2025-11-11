@@ -47,6 +47,7 @@ Thumbs.db
 # Jupyter Notebook
 .ipynb_checkpoints
 notebooks/
+imagem/
 
 # Model files (handled by Git LFS)
 # *.pth

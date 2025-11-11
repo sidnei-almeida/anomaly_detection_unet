@@ -31,7 +31,7 @@ anomaly_detection_unet/
 └── README.md
 ```
 
-Legacy assets such as notebooks, example images and training history are kept for reference but are excluded from the Docker build context.
+Legacy assets such as notebooks and training history are kept for reference but are excluded from the Docker build context (and not pushed to the Space).
 
 ---
 
