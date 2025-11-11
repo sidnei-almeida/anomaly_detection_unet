@@ -162,6 +162,10 @@ def predict(model: UNet, config: Dict[str, Any], image: Image.Image) -> Dict[str
         config=config,
     )
 
+    if prediction_text != "Anomaly Detected":
+        bounding_boxes = []
+        mask_boxes = []
+
     results_dict = {
         "prediction": prediction_text,
         "error": error.item(),
@@ -283,6 +287,9 @@ def extract_bounding_boxes(
     boxes: List[Dict[str, Any]] = []
     mask_boxes: List[Tuple[int, int, int, int]] = []
 
+    min_area = float(config.get("bounding_box_min_area", 250.0))
+    min_score = float(config.get("bounding_box_min_score", 0.1))
+
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
 
@@ -303,9 +310,13 @@ def extract_bounding_boxes(
 
         width = xmax - xmin
         height = ymax - ymin
+        area = width * height
 
         crop = mask[y_start:y_end, x_start:x_end]
         score = float(np.clip(crop.mean() / 255.0, 0.0, 1.0)) if crop.size else 0.0
+
+        if area < min_area or score < min_score:
+            continue
 
         boxes.append(
             {
