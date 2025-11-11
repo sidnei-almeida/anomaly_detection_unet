@@ -1,21 +1,14 @@
-# --- Bibliotecas do Streamlit e UI ---
-streamlit>=1.28.0
-streamlit-option-menu>=0.3.6
-streamlit-image-select>=0.6.0
+# --- Core runtime ---
+fastapi>=0.103.0
+uvicorn[standard]>=0.23.0
+python-multipart>=0.0.6
 
-# --- Bibliotecas de Dados e Visualização ---
-pandas>=1.5.0
+# --- PyTorch CPU wheels ---
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.0.0
+torchvision>=0.15.0
+
+# --- Imaging and numerical stack ---
 numpy>=1.24.0
-plotly>=5.15.0
-matplotlib>=3.7.0
-
-# --- Bibliotecas de Imagem e Visão Computacional ---
 Pillow>=9.5.0
 opencv-python-headless>=4.8.0
-
-# --- PyTorch e Torchvision (APENAS CPU) ---
-# Esta linha instrui o pip a buscar no repositório especial da PyTorch
-# que contém as versões leves, compiladas apenas para CPU.
---extra-index-url https://download.pytorch.org/whl/cpu
-torch
-torchvision

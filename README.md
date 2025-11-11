@@ -1,139 +1,137 @@
-# 🔍 Anomaly Detection • U-Net
+## Bottle Anomaly Detection API
 
-Aplicativo profissional em Streamlit para detecção de anomalias em garrafas usando modelo U-Net treinado no dataset MVTec AD.
-
-## 🚀 Características
-
-- **Interface Premium**: Design dark elegante inspirado em aplicativos profissionais
-- **Detecção de Anomalias**: Classificação de imagens como normal ou anômala
-- **Visualizações Detalhadas**: Mapa de anomalia, máscara binária e mapa de calor
-- **Análise de Treinamento**: Gráficos de evolução das métricas
-- **Seleção de Imagens**: Interface intuitiva com `streamlit-image-select`
-- **Otimizado para Cloud**: Execução sem GPU, compatível com Streamlit Cloud
-
-## 📁 Estrutura do Projeto
-
-```
-anomaly_detection_anomalib/
-├── app.py                    # Aplicativo principal Streamlit
-├── model_utils.py           # Utilitários do modelo U-Net
-├── requirements.txt         # Dependências Python (CPU only)
-├── requirements-gpu.txt     # Dependências Python (com GPU)
-├── run_app.sh              # Script de execução
-├── models/                 # Modelos treinados
-│   ├── bottle_unet_best.pth
-│   └── bottle_unet_config.json
-├── imagem/                 # Imagens de exemplo
-│   ├── bottle_normal_1.jpg
-│   ├── bottle_anomaly_1.jpg
-│   └── ...
-├── notebooks/              # Notebooks de treinamento
-│   ├── 1_Data_Analysis_And_Manipulation.ipynb
-│   ├── 2_Model_Construction_And_Training.ipynb
-│   ├── 3_Model_Valuation.ipynb
-│   └── 4_Modelo_UNET_Training.ipynb
-└── training_history/       # Histórico de treinamento
-    └── bottle_unet_history.json
-```
-
-## 🛠️ Instalação e Execução
-
-### 1. Instalar Dependências
-
-```bash
-# Para Streamlit Cloud (CPU only)
-pip install -r requirements.txt
-
-# Para instalação local com GPU (opcional)
-pip install -r requirements-gpu.txt
-```
-
-### 2. Executar o Aplicativo
-
-```bash
-# Método 1: Script automatizado
-./run_app.sh
-
-# Método 2: Comando direto
-streamlit run app.py
-```
-
-### 3. Acessar o Aplicativo
-
-Abra seu navegador e acesse: `http://localhost:8501`
-
-## 🎯 Funcionalidades
-
-### 📊 Página Inicial
-- Status do sistema (modelo, configuração, histórico)
-- Métricas principais do modelo
-- Gráfico de evolução do treinamento
-
-### 🔍 Detecção de Anomalias
-- **Exemplos**: Selecione imagens de exemplo com interface visual
-- **Configurações**: Thresholds definidos no model_utils.py
-- **Resultados**: 
-  - Classificação (Normal/Anômala)
-  - Erro de reconstrução
-  - Mapa de anomalia em escala de cinza
-  - Máscara binária de pixels anômalos
-  - Mapa de calor sobreposto
-
-### 📈 Análise de Treinamento
-- Evolução das losses (train/validation)
-- Distribuição das métricas
-- Tabela completa de dados
-- Identificação da melhor época
-
-## ⚙️ Configuração do Modelo
-
-O arquivo `models/bottle_unet_config.json` contém:
-
-```json
-{
-    "classification_threshold": 0.01,
-    "pixel_visualization_threshold": 0.5
-}
-```
-
-- **classification_threshold**: Valor acima do qual a imagem é considerada anômala
-- **pixel_visualization_threshold**: Threshold para destacar pixels anômalos na visualização
-
-## 🎨 Design e Interface
-
-- **Tema Dark Premium**: Cores elegantes com gradientes
-- **Tipografia**: Fonte Inter para melhor legibilidade
-- **Componentes**: Cards, badges e métricas estilizados
-- **Responsivo**: Adaptável a diferentes tamanhos de tela
-- **Navegação**: Menu lateral com `streamlit-option-menu`
-
-## 🔧 Tecnologias Utilizadas
-
-- **Streamlit**: Framework web para aplicações de ML
-- **PyTorch**: Framework de deep learning
-- **U-Net**: Arquitetura de rede neural para reconstrução
-- **OpenCV**: Processamento de imagens
-- **Matplotlib/Plotly**: Visualizações e gráficos
-- **PIL**: Manipulação de imagens
-
-## 📱 Compatibilidade
-
-- ✅ **Streamlit Cloud**: Totalmente compatível (CPU only)
-- ✅ **Docker**: Pode ser containerizado
-- ✅ **Local**: Execução em ambiente local (CPU/GPU)
-- ✅ **CPU Only**: Otimizado para execução sem GPU
-- ⚠️ **GPU**: Para uso com GPU, instale versões específicas do PyTorch
-
-## 👨‍💻 Autor
-
-**sidnei-almeida**
-- GitHub: [@sidnei-almeida](https://github.com/sidnei-almeida)
-- Email: sidnei.almeida1806@gmail.com
-
-## 📄 Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
+REST API that serves a U-Net reconstruction model trained on the MVTec AD **bottle** subset.  
+The service accepts an RGB image, classifies it as *Normal* or *Anomaly Detected*, and optionally returns visualization artifacts encoded as base64.
 
 ---
 
-*Desenvolvido com ❤️ para detecção de anomalias em imagens industriais*
+## Project Structure
+
+```
+anomaly_detection_unet/
+├── app.py                  # FastAPI application entry point
+├── model_utils.py          # Model loading, preprocessing and visualization helpers
+├── models/
+│   ├── bottle_unet_best.pth        # U-Net checkpoint (Git LFS)
+│   └── bottle_unet_config.json     # Inference thresholds and post-processing configs
+├── requirements.txt        # Runtime dependencies (CPU only)
+├── Dockerfile              # Production container image
+├── .dockerignore
+└── README.md
+```
+
+Legacy assets such as notebooks, example images and training history are kept for reference but are excluded from the Docker build context.
+
+---
+
+## Quickstart (Local)
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+
+uvicorn app:app --host 0.0.0.0 --port 8000
+```
+
+Open http://localhost:8000/docs to explore the interactive Swagger UI.
+
+---
+
+## API Overview
+
+| Endpoint      | Method | Description                                   |
+|---------------|--------|-----------------------------------------------|
+| `/health`     | GET    | Lightweight readiness probe                   |
+| `/`           | GET    | Metadata and documentation links              |
+| `/infer`      | POST   | Image classification and optional artifacts   |
+
+### Request (multipart/form-data)
+
+- `file` *(required)*: RGB image (`.png`, `.jpg`, `.jpeg`)
+- `include_visualizations` *(boolean, default `true`)*: return anomaly map, mask, heatmap overlay and bounding box as base64-encoded PNGs
+
+### Response
+
+```json
+{
+  "prediction": "Anomaly Detected",
+  "reconstruction_error": 0.00123,
+  "thresholds": {
+    "classification": 0.000205,
+    "pixel_visualization": 20.0,
+    "bounding_box": 1.5
+  },
+  "latency_ms": 87.421,
+  "image_size": { "width": 1024, "height": 1024 },
+  "artifacts": {
+    "anomaly_map": { "format": "PNG", "encoding": "base64", "data": "..." },
+    "binary_mask": { "format": "PNG", "encoding": "base64", "data": "..." },
+    "heatmap_overlay": { "format": "PNG", "encoding": "base64", "data": "..." },
+    "bounding_box": { "format": "PNG", "encoding": "base64", "data": "..." }
+  }
+}
+```
+
+Set `include_visualizations=false` to skip the `artifacts` payload.
+
+---
+
+## Docker
+
+Build and run the container locally:
+
+```bash
+docker build -t bottle-anomaly-api .
+docker run --rm -p 7860:7860 bottle-anomaly-api
+```
+
+The image exposes port **7860** by default, matching the requirement for Hugging Face Space deployments.
+
+---
+
+## Deploying to Hugging Face Spaces
+
+1. **Enable Git LFS locally** (required for the ~100 MB `.pth` checkpoint):
+   ```bash
+   git lfs install
+   git lfs track "*.pth"
+   ```
+2. Push the repository (including LFS files) to the Space.
+3. Configure the Space as a **Docker** Space; the platform will detect the `Dockerfile`.
+4. Hugging Face automatically sets `PORT=7860`. The container entrypoint already respects this value.
+
+> ⚠️ Do **not** commit large model weights outside Git LFS. Hugging Face enforces a strict 5 GB limit for Git blobs.
+
+---
+
+## Configuration
+
+`models/bottle_unet_config.json` controls inference behaviour:
+
+- `classification_threshold`: reconstruction error threshold to flag anomalies
+- `pixel_visualization_threshold`: pixel-level cut-off for binary masks
+- `bounding_box_threshold`: sensitivity for contour detection
+- `dilation_iterations`: morphological dilation applied before extracting bounding boxes
+
+Adjust these values to tune false-positive/false-negative trade-offs.
+
+---
+
+## Tech Stack
+
+- **FastAPI** + **Uvicorn** for high-performance REST serving
+- **PyTorch** for U-Net reconstruction
+- **torchvision.transforms** for preprocessing
+- **OpenCV** + **Pillow** for post-processing and visualization
+
+---
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+Maintained by [@sidnei-almeida](https://github.com/sidnei-almeida)
