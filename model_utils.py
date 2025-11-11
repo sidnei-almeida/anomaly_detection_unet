@@ -263,6 +263,7 @@ def extract_bounding_boxes(
     """
     original_image: Image.Image = results["original_image"]
     mask = results["anomaly_map_scaled"]
+    binary_mask = results.get("binary_mask")
 
     width_orig, height_orig = original_image.size
     scale_x = width_orig / 256.0
@@ -287,8 +288,8 @@ def extract_bounding_boxes(
     boxes: List[Dict[str, Any]] = []
     mask_boxes: List[Tuple[int, int, int, int]] = []
 
-    min_area = float(config.get("bounding_box_min_area", 250.0))
-    min_score = float(config.get("bounding_box_min_score", 0.1))
+    min_area = float(config.get("bounding_box_min_area", 64.0))
+    min_score = float(config.get("bounding_box_min_score", 0.02))
 
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
@@ -314,6 +315,11 @@ def extract_bounding_boxes(
 
         crop = mask[y_start:y_end, x_start:x_end]
         score = float(np.clip(crop.mean() / 255.0, 0.0, 1.0)) if crop.size else 0.0
+
+        if binary_mask is not None:
+            crop_binary = binary_mask[y_start:y_end, x_start:x_end]
+            if crop_binary.size:
+                score = max(score, float(np.clip(crop_binary.mean() / 255.0, 0.0, 1.0)))
 
         if area < min_area or score < min_score:
             continue
