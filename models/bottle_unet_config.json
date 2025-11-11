@@ -1,0 +1,6 @@
+{
+    "classification_threshold": 0.000205,
+    "pixel_visualization_threshold": 6,
+    "bounding_box_threshold": 15,
+    "dilation_iterations": 2
+}
