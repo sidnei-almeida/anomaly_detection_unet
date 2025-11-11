@@ -1,0 +1,50 @@
+Bottle Anomaly Detection API – Endpoints
+========================================
+
+1. GET /health
+   - Uso: Verifica se a API está pronta para receber requisições.
+   - Resposta 200:
+     {
+       "status": "ready" | "loading"
+     }
+
+2. GET /
+   - Uso: Recupera metadados básicos da API e links para a documentação.
+   - Resposta 200:
+     {
+       "name": "...",
+       "version": "...",
+       "description": "...",
+       "docs": {
+         "openapi": "/openapi.json",
+         "swagger_ui": "/docs",
+         "redoc": "/redoc"
+       }
+     }
+
+3. POST /infer
+   - Uso: Executa a inferência de anomalia em uma imagem RGB (PNG ou JPEG).
+   - Corpo (multipart/form-data):
+     • file (obrigatório): arquivo de imagem.
+     • include_visualizations (opcional, padrão true): retorna ou não artefatos em base64.
+   - Resposta 200:
+     {
+       "prediction": "Normal" | "Anomaly Detected",
+       "reconstruction_error": float,
+       "thresholds": {
+         "classification": float,
+         "pixel_visualization": float,
+         "bounding_box": float
+       },
+       "latency_ms": float,
+       "image_size": {
+         "width": int,
+         "height": int
+       },
+       "artifacts": { ... } // presente somente quando include_visualizations=true
+     }
+
+Observações:
+- Todos os retornos utilizam JSON.
+- O serviço roda em CPU, sem dependências de GPU.
+
