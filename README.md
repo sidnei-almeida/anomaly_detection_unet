@@ -1,6 +1,6 @@
 <!-- Canonical repository: https://github.com/sidnei-almeida/anomaly_detection_unet -->
 <p align="center">
-  <img src="images/header.png" alt="Project banner — anomaly_detection_unet REST API" width="520" />
+  <img src="header.png" alt="Project banner — anomaly_detection_unet REST API" width="520" />
 </p>
 
 <h1 align="center">anomaly_detection_unet</h1>
