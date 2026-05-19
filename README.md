@@ -52,26 +52,26 @@
 
 ## Gallery
 
+### Software — exploring the REST API
+
+Swagger UI at `/docs` lists the multipart `POST /infer` contract plus links generated from `/`. Snapshot below sits at **`softrware.png`** in the **repository root** (same paths as GitHub renders the README).
+
+<p align="center">
+  <img src="softrware.png" alt="FastAPI Swagger UI — bottle anomaly detection API" width="920" />
+</p>
+
+<p align="center">
+  <em><strong>Figure 1.</strong> Interactive OpenAPI tooling around the FastAPI app (local UI wording may vary slightly).</em>
+</p>
+
 ### Example bottle crops (inputs you can POST to `/infer`)
 
-The **`imagem/`** directory keeps representative RGB crops bundled with this repo (`000.png` for a sane baseline; `anomaly_*.png` for damaged samples — naming follows the project's demo set). Serve them manually with Swagger, `curl`, or any HTTP client; they are omitted from Docker builds (see `.dockerignore`).
+The **`imagem/`** directory keeps representative RGB crops (`000.png` baseline; `anomaly_*.png` defects). Upload them via Swagger, `curl`, etc.; they are omitted from Docker builds ([`.dockerignore`](.dockerignore)).
 
 | Normal (baseline) | Anomaly sample |
 |:---:|:---:|
 | ![](imagem/000.png) | ![](imagem/anomaly_1.png) |
-| *Figure 1a. Typical good bottle appearance used as a smoke-test input (`imagem/000.png`).* | *Figure 1b. Defect-rich crop illustrating how reconstruction error spikes (`imagem/anomaly_1.png`).* |
-
-### Exploring the REST surface
-
-Swagger UI renders auto-generated schemas for multipart uploads (`/infer`) plus documentation shortcuts coming from `/`.
-
-<p align="center">
-  <img src="images/softrware.png" alt="FastAPI Swagger UI showing bottle anomaly inference routes" width="920" />
-</p>
-
-<p align="center">
-  <em><strong>Figure 2.</strong> Interactive OpenAPI tooling around the FastAPI app (example screenshot — local UI may vary slightly).</em>
-</p>
+| *Figure 2a. Good bottle crop for smoke tests (`imagem/000.png`).* | *Figure 2b. Defect-rich crop (`imagem/anomaly_1.png`).* |
 
 ---
 
@@ -84,7 +84,7 @@ Swagger UI renders auto-generated schemas for multipart uploads (`/infer`) plus 
 | **Sanity-checked weights** | Startup refuses microscopic `.pth` blobs (often Git LFS pointer mistakes). |
 | **Relaxed default CORS** | Good for playgrounds — scope-down before production exposures. |
 
-Jupyter artefacts (`notebooks/`, `training_history/`) remain for reproducibility audits. Demo snapshots under `images/` + `imagem/` are documentation aids and **stay out** of the minimal runtime image enforced by `.dockerignore`.
+Jupyter artefacts (`notebooks/`, `training_history/`) remain for reproducibility audits. README hero + Swagger screenshots (**`header.png`**, **`softrware.png`** at repo root) and demo crops under **`imagem/`** are documentation aids and **stay out** of the minimal runtime image enforced by `.dockerignore`.
 
 ---
 
@@ -98,7 +98,7 @@ Jupyter artefacts (`notebooks/`, `training_history/`) remain for reproducibility
 | **Imaging deps** | `opencv-python-headless`, `pillow`, `numpy` from requirements. |
 | **Git LFS** | Host-side client required so historical checkpoints hydrate after clone (see section below). |
 
-> **Operational notes:** **`docker build` only sees paths not excluded by [`.dockerignore`](.dockerignore)** — demos under `images/` / `imagem/` never bake into default images. Hydrate **`models/bottle_unet_best.pth`** to real binaries on the host (**`git lfs pull`**) *before* `docker build`; otherwise the layer will copy Git LFS text pointers (~130 bytes) and the runtime health check fails.
+> **Operational notes:** **`docker build` only sees paths not excluded by [`.dockerignore`](.dockerignore)** — root-level README assets (`header.png`, `softrware.png`) and **`imagem/`** never bake into default images. Hydrate **`models/bottle_unet_best.pth`** to real binaries on the host (**`git lfs pull`**) *before* `docker build`; otherwise the layer will copy Git LFS text pointers (~130 bytes) and the runtime health check fails.
 
 ---
 
@@ -130,7 +130,7 @@ pip install -r requirements.txt
 uvicorn app:app --host 0.0.0.0 --port 8000
 ```
 
-Navigate to [http://localhost:8000/docs](http://localhost:8000/docs) — use the **`imagem/`** crops from **Figure 1** as ready-made payloads when iterating locally.
+Navigate to [http://localhost:8000/docs](http://localhost:8000/docs) — use the **`imagem/`** crops from **Figures 2a–2b** as ready-made payloads when iterating locally.
 
 Minimal `curl` probe (classification only — omit heavy artifacts):
 
@@ -221,6 +221,8 @@ Containers bind **7860** for Hugging Face parity (`PORT=7860`). Mount datasets m
 
 ```
 .
+├── header.png                 # README hero / project banner
+├── softrware.png              # Swagger / OpenAPI screenshot for docs
 ├── app.py                     # FastAPI app + routes (/health, /, /infer)
 ├── model_utils.py             # U-Net definition + preprocessing + artefacts
 ├── models/
@@ -229,9 +231,6 @@ Containers bind **7860** for Hugging Face parity (`PORT=7860`). Mount datasets m
 ├── imagem/
 │   ├── 000.png                # Demo baseline (normal-looking crop)
 │   └── anomaly_*.png          # Demo defects for smoke tests / README figures
-├── images/
-│   ├── header.png             # README hero artwork
-│   └── softrware.png          # Swagger / UI screenshot supplemental visual
 ├── notebooks/                # Offline training/analysis material
 ├── training_history/
 ├── GIT_LFS.md                # Clone / distro / HF notes (Git LFS)
