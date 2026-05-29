@@ -43,7 +43,9 @@
   ],
   "debug": {
     "bbox_method": "foreground_masked_conservative_connected_components_on_z_map",
-    "localization_note": "Bounding boxes are generated from category-normalized reconstruction error maps constrained to the estimated product foreground. Boxes are approximate visual hints.",
+    "score_region": "full_z_map",
+    "localization_region": "product_foreground",
+    "localization_note": "Classification uses top_1_z_score on the full category-normalized z-map. Bounding boxes and mask use the estimated product foreground only.",
     "latency_ms": 78.73
   }
 }

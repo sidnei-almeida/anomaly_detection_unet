@@ -61,9 +61,9 @@ Space page: https://huggingface.co/spaces/salmeida/bottle-anomaly-detection
 |------|-------|
 | Architecture | `DenoisingConvAutoencoder` |
 | Training | Denoising conv autoencoder, L1 loss, 256×256 RGB |
-| Score | `top_1_z_score` (mean of top 1% z-map pixels) |
+| Score | `top_1_z_score` on the **full** category-normalized z-map (compatible with `thresholds.json`) |
 | Thresholds | Bottle-specific, from validation (`thresholds.json`) |
-| Localization | Category-normalized reconstruction error → heatmap, mask, approximate boxes |
+| Localization | Product foreground mask → `z_map_for_boxes` → heatmap (full z-map), mask, boxes |
 
 ### Supported category
 
@@ -231,7 +231,9 @@ When running Docker or `uvicorn` on your machine, use `http://localhost:7860` in
   ],
   "debug": {
     "bbox_method": "foreground_masked_conservative_connected_components_on_z_map",
-    "localization_note": "Bounding boxes are approximate suspicious regions derived from reconstruction error maps.",
+    "score_region": "full_z_map",
+    "localization_region": "product_foreground",
+    "localization_note": "Classification uses top_1_z_score on the full category-normalized z-map. Bounding boxes and mask use the estimated product foreground only.",
     "latency_ms": 78.73
   }
 }
@@ -287,7 +289,9 @@ Boxes are generated from **category-normalized reconstruction error maps constra
 
 Each box may include `foreground_ratio` (0–1): overlap with the estimated product region. Boxes with low foreground coverage are discarded server-side.
 
-With `include_debug=true`, the API also returns `debug_images.product_mask` showing the estimated object region used to mask localization.
+With `include_debug=true`, the API also returns `debug_images.product_mask` (estimated object region) and `debug_images.z_map_for_boxes` (z-map masked to the foreground for localization).
+
+Classification (`scores.anomaly_score` vs `scores.threshold`) always uses the full z-map. The product mask is **not** applied to the score until thresholds are recalibrated.
 
 ---
 

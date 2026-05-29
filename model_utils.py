@@ -37,10 +37,12 @@ IMAGE_SIZE = 256
 MIN_MODEL_BYTES = 1_000
 LOCALIZATION_METHOD = "category-normalized reconstruction error"
 BBOX_METHOD = "foreground_masked_conservative_connected_components_on_z_map"
+SCORE_REGION = "full_z_map"
+LOCALIZATION_REGION = "product_foreground"
 METADATA_NOTE = (
-    "Bottle-only deployment. Bounding boxes are generated from category-normalized "
-    "reconstruction error maps constrained to the estimated product foreground. "
-    "Boxes are approximate visual hints."
+    "Bottle-only deployment. Classification uses top_1_z_score on the full "
+    "category-normalized z-map (compatible with existing thresholds). Bounding boxes "
+    "and mask use the estimated product foreground only. Boxes are approximate visual hints."
 )
 LIMITATION_NOTE = METADATA_NOTE
 BBOX_NOTE = METADATA_NOTE
@@ -392,12 +394,18 @@ def _compute_z_map(
     return z_map
 
 
-def _compute_top_1_z_score(z_map: np.ndarray) -> float:
-    """Average of the top 1% highest z-scores in the map."""
+def compute_topk_score(z_map: np.ndarray, top_percent: float = 1.0) -> float:
+    """Mean of the highest ``top_percent`` fraction of z-scores in the map."""
     flat = z_map.reshape(-1)
-    top_k = max(1, int(np.ceil(flat.size * 0.01)))
+    fraction = max(top_percent, 0.0) / 100.0
+    top_k = max(1, int(np.ceil(flat.size * fraction)))
     top_values = np.partition(flat, -top_k)[-top_k:]
     return float(np.mean(top_values))
+
+
+def _compute_top_1_z_score(z_map: np.ndarray) -> float:
+    """Average of the top 1% highest z-scores in the map."""
+    return compute_topk_score(z_map, top_percent=1.0)
 
 
 def _get_category_threshold(thresholds: Dict[str, Any], category: str) -> float:
@@ -668,18 +676,21 @@ def predict(
 
     error_map = _compute_error_map(image_tensor, reconstruction)
     z_map = _compute_z_map(error_map, category, artifacts.error_profiles)
-    top_1_z_score = _compute_top_1_z_score(z_map)
+
+    # Classification: full z-map score — thresholds were calibrated on this region.
+    anomaly_score = compute_topk_score(z_map, top_percent=1.0)
     threshold = _get_category_threshold(artifacts.thresholds, category)
-    is_anomaly = top_1_z_score > threshold
+    is_anomaly = anomaly_score > threshold
     status = "anomaly" if is_anomaly else "normal"
 
+    # Localization: product foreground only — mask, boxes, and z_map_for_boxes.
     original_rgb = np.array(resized_original.convert("RGB"), dtype=np.float32) / 255.0
     product_mask = compute_product_mask(original_rgb, category)
-    z_map_masked = z_map * product_mask
+    z_map_for_boxes = z_map * product_mask
 
-    mask = _build_localization_mask(z_map_masked, artifacts.bbox_config)
+    mask = _build_localization_mask(z_map_for_boxes, artifacts.bbox_config)
     boxes = _extract_approximate_boxes(
-        z_map_masked, mask, artifacts.bbox_config, product_mask
+        z_map_for_boxes, mask, artifacts.bbox_config, product_mask
     )
 
     return {
@@ -687,8 +698,10 @@ def predict(
         "is_anomaly": is_anomaly,
         "category": category,
         "score_name": SCORE_NAME,
-        "anomaly_score": top_1_z_score,
+        "anomaly_score": anomaly_score,
         "threshold": threshold,
+        "score_region": SCORE_REGION,
+        "localization_region": LOCALIZATION_REGION,
         "boxes": boxes,
         "error_mean": float(np.mean(error_map)),
         "z_map_max": float(np.max(z_map)),
@@ -700,6 +713,7 @@ def predict(
         "overlay": _build_overlay_image(resized_original, boxes, artifacts.bbox_config),
         "error_map_gray": _normalize_array_to_gray_image(error_map),
         "z_map_gray": _normalize_array_to_gray_image(z_map),
+        "z_map_for_boxes_gray": _normalize_array_to_gray_image(z_map_for_boxes),
         "product_mask_gray": Image.fromarray(
             (product_mask * 255).astype(np.uint8), mode="L"
         ),

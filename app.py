@@ -132,6 +132,8 @@ def _image_size_block() -> Dict[str, int]:
 def _debug_block(results: Dict[str, Any], latency_ms: float) -> Dict[str, Any]:
     return {
         "bbox_method": str(results["bbox_method"]),
+        "score_region": str(results.get("score_region", "full_z_map")),
+        "localization_region": str(results.get("localization_region", "product_foreground")),
         "localization_note": METADATA_NOTE,
         "latency_ms": round(float(latency_ms), 3),
     }
@@ -175,6 +177,7 @@ def _build_predict_payload(
         payload["debug_images"] = {
             "error_map": _encode_data_url(results["error_map_gray"]),
             "z_map_gray": _encode_data_url(results["z_map_gray"]),
+            "z_map_for_boxes": _encode_data_url(results["z_map_for_boxes_gray"]),
             "product_mask": _encode_data_url(results["product_mask_gray"]),
         }
 
