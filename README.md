@@ -1,3 +1,20 @@
+---
+title: Bottle Anomaly Detection
+emoji: 🔍
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+license: mit
+short_description: Multi-category MVTec AD anomaly inspection API (DenoisingConvAutoencoder)
+tags:
+  - anomaly-detection
+  - computer-vision
+  - fastapi
+  - mvtec
+---
+
 # visual-anomaly-inspection-api
 
 **FastAPI** service for multi-category visual anomaly inspection on **MVTec AD structured objects**, powered by experiment **`mvtec_structured_objects_dae_v1`** (`multi_product_denoising_conv_autoencoder`).
