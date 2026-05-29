@@ -130,14 +130,26 @@ export PORT=7860
 
 ## Example request
 
+Compact response (no base64 — recommended for integrations and README):
+
 ```bash
 curl -s http://localhost:7860/health | jq
 
-curl -X POST "http://localhost:7860/predict" \
+curl -s -X POST "http://localhost:7860/predict" \
+  -F "category=bottle" \
+  -F "include_images=false" \
+  -F "file=@imagem/anomaly_1.png" \
+  -o examples/response_compact.json
+```
+
+Full response with images (`include_images=true`):
+
+```bash
+curl -s -X POST "http://localhost:7860/predict" \
   -F "category=bottle" \
   -F "include_images=true" \
-  -F "include_debug=false" \
-  -F "file=@examples/bottle_anomaly.png" | jq
+  -F "file=@imagem/anomaly_1.png" \
+  -o examples/response_full_sample.json
 ```
 
 Or use the helper script:
@@ -151,6 +163,12 @@ chmod +x examples/curl_predict.sh
 
 ## Example response (`POST /predict`)
 
+**Compact sample** (no `images` block): see [`examples/response_compact.json`](examples/response_compact.json) — generated with `include_images=false`.
+
+**Full sample** (with base64 data URLs): see [`examples/response_full_sample.json`](examples/response_full_sample.json) — generated with `include_images=true`. Do not paste that file into the README (it is ~260 KB).
+
+### Compact JSON shape
+
 ```json
 {
   "status": "anomaly",
@@ -162,31 +180,47 @@ chmod +x examples/curl_predict.sh
     "score_name": "top_1_z_score"
   },
   "scores": {
-    "anomaly_score": 5.04,
-    "threshold": 3.91,
-    "error_mean": 0.018,
-    "z_map_max": 6.72
+    "anomaly_score": 5.044606685638428,
+    "threshold": 3.911202907562254,
+    "error_mean": 0.01017017476260662,
+    "z_map_max": 12.303437232971191
   },
-  "image_size": { "width": 256, "height": 256 },
+  "image_size": {
+    "width": 256,
+    "height": 256
+  },
   "boxes": [
     {
-      "x": 100, "y": 184, "w": 7, "h": 10,
-      "area": 42.0, "mean_z": 2.64, "max_z": 6.72, "score": 2.64
+      "x": 100,
+      "y": 184,
+      "w": 7,
+      "h": 10,
+      "area": 42.0,
+      "mean_z": 2.635521650314331,
+      "max_z": 6.720283508300781,
+      "score": 2.635521650314331
     }
   ],
-  "images": {
-    "original": "data:image/png;base64,...",
-    "reconstruction": "data:image/png;base64,...",
-    "heatmap": "data:image/png;base64,...",
-    "mask": "data:image/png;base64,..."
-  },
   "debug": {
     "bbox_method": "conservative_connected_components_on_z_map",
     "localization_note": "Bounding boxes are approximate suspicious regions derived from reconstruction error maps.",
-    "latency_ms": 120.5
+    "latency_ms": 78.73
   }
 }
 ```
+
+When `include_images=true`, the same payload adds:
+
+```json
+"images": {
+  "original": "data:image/png;base64,...",
+  "reconstruction": "data:image/png;base64,...",
+  "heatmap": "data:image/png;base64,...",
+  "mask": "data:image/png;base64,..."
+}
+```
+
+Image fields are returned as **base64 PNG data URLs** and can be used directly as `<img src="...">` values in the frontend.
 
 ### Response images (256×256)
 
@@ -198,7 +232,24 @@ chmod +x examples/curl_predict.sh
 | `images.mask` | Binary suspicious-region mask |
 | `images.overlay` | Optional — server-drawn boxes (`include_overlay=true`) |
 
-**Front-end:** draw rectangles from `boxes` on `images.original` (coordinates are 256×256). Overlay is optional.
+### Front-end bounding boxes (256×256)
+
+`image_size` is always `{ "width": 256, "height": 256 }`. Every box uses the same coordinate system as `images.original`:
+
+- `x`, `y` — top-left corner in pixels  
+- `w`, `h` — width and height in pixels  
+
+Example (canvas or CSS on top of the 256×256 image):
+
+```javascript
+boxes.forEach(({ x, y, w, h }) => {
+  // Draw on images.original (256×256) or scale if you upscale the image:
+  // scaleX = displayWidth / response.image_size.width
+  ctx.strokeRect(x * scaleX, y * scaleY, w * scaleX, h * scaleY);
+});
+```
+
+Prefer drawing from the `boxes` array; `images.overlay` is optional server-side preview only.
 
 ---
 

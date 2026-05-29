@@ -31,7 +31,6 @@ from model_utils import (
 LOGGER = logging.getLogger("anomaly_detection_api")
 logging.basicConfig(level=logging.INFO)
 
-PROCESSED_IMAGE_SIZE = {"width": IMAGE_SIZE, "height": IMAGE_SIZE}
 DEFAULT_PORT = int(os.environ.get("PORT", "7860"))
 
 
@@ -81,7 +80,8 @@ def _encode_data_url(image: Image.Image, format_: str = "PNG") -> str:
     return f"data:{mime};base64,{_encode_image(image, format_)}"
 
 
-def _model_block() -> Dict[str, Any]:
+def _model_block() -> Dict[str, str]:
+    """Stable model metadata block (always real string fields, never placeholders)."""
     return {
         "experiment_name": EXPERIMENT_NAME,
         "model_name": MODEL_NAME,
@@ -89,20 +89,49 @@ def _model_block() -> Dict[str, Any]:
     }
 
 
-def _scores_block(results: Dict[str, Any]) -> Dict[str, Any]:
+def _scores_block(results: Dict[str, Any]) -> Dict[str, float]:
+    """Numeric scores as JSON-safe Python floats."""
     return {
-        "anomaly_score": results["anomaly_score"],
-        "threshold": results["threshold"],
-        "error_mean": results["error_mean"],
-        "z_map_max": results["z_map_max"],
+        "anomaly_score": float(results["anomaly_score"]),
+        "threshold": float(results["threshold"]),
+        "error_mean": float(results["error_mean"]),
+        "z_map_max": float(results["z_map_max"]),
     }
+
+
+def _boxes_block(results: Dict[str, Any]) -> list[Dict[str, float | int]]:
+    """
+  Bounding boxes in 256x256 space for client-side drawing on images.original.
+
+  Coordinates: x, y = top-left; w, h = width/height in pixels.
+  """
+    serialized: list[Dict[str, float | int]] = []
+    for box in results["boxes"]:
+        serialized.append(
+            {
+                "x": int(box["x"]),
+                "y": int(box["y"]),
+                "w": int(box["w"]),
+                "h": int(box["h"]),
+                "area": float(box["area"]),
+                "mean_z": float(box["mean_z"]),
+                "max_z": float(box["max_z"]),
+                "score": float(box["score"]),
+            }
+        )
+    return serialized
+
+
+def _image_size_block() -> Dict[str, int]:
+    """Inference coordinate system — matches returned images and box coordinates."""
+    return {"width": int(IMAGE_SIZE), "height": int(IMAGE_SIZE)}
 
 
 def _debug_block(results: Dict[str, Any], latency_ms: float) -> Dict[str, Any]:
     return {
-        "bbox_method": results["bbox_method"],
+        "bbox_method": str(results["bbox_method"]),
         "localization_note": METADATA_NOTE,
-        "latency_ms": latency_ms,
+        "latency_ms": round(float(latency_ms), 3),
     }
 
 
@@ -120,14 +149,14 @@ def _build_predict_payload(
     Boxes are 256x256 coordinates; draw them client-side on images.original.
     """
     payload: Dict[str, Any] = {
-        "status": results["status"],
-        "is_anomaly": results["is_anomaly"],
-        "category": results["category"],
+        "status": str(results["status"]),
+        "is_anomaly": bool(results["is_anomaly"]),
+        "category": str(results["category"]),
         "model": _model_block(),
         "scores": _scores_block(results),
-        "image_size": dict(PROCESSED_IMAGE_SIZE),
-        "boxes": results["boxes"],
-        "debug": _debug_block(results, latency_ms),
+        "image_size": _image_size_block(),
+        "boxes": _boxes_block(results),
+        "debug": _debug_block(results, float(latency_ms)),
     }
 
     if include_images:

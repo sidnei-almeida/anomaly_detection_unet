@@ -1,0 +1,47 @@
+{
+  "status": "anomaly",
+  "is_anomaly": true,
+  "category": "bottle",
+  "model": {
+    "experiment_name": "mvtec_structured_objects_dae_v1",
+    "model_name": "multi_product_denoising_conv_autoencoder",
+    "score_name": "top_1_z_score"
+  },
+  "scores": {
+    "anomaly_score": 5.044606685638428,
+    "threshold": 3.911202907562254,
+    "error_mean": 0.01017017476260662,
+    "z_map_max": 12.303435325622559
+  },
+  "image_size": {
+    "width": 256,
+    "height": 256
+  },
+  "boxes": [
+    {
+      "x": 100,
+      "y": 184,
+      "w": 7,
+      "h": 10,
+      "area": 42.0,
+      "mean_z": 2.635521650314331,
+      "max_z": 6.720283508300781,
+      "score": 2.635521650314331
+    },
+    {
+      "x": 112,
+      "y": 223,
+      "w": 48,
+      "h": 22,
+      "area": 588.0,
+      "mean_z": 2.4493355751037598,
+      "max_z": 8.661852836608887,
+      "score": 2.4493355751037598
+    }
+  ],
+  "debug": {
+    "bbox_method": "conservative_connected_components_on_z_map",
+    "localization_note": "Bounding boxes are approximate suspicious regions derived from reconstruction error maps.",
+    "latency_ms": 78.73
+  }
+}

@@ -60,6 +60,8 @@ Thumbs.db
 !**/requirements*.txt
 !models/**/*.json
 !models/mvtec_structured_objects_dae_v1/*.json
+!examples/response_compact.json
+!examples/response_full_sample.json
 !training_history/*.json
 
 # Logs

@@ -11,9 +11,12 @@ echo "GET ${BASE_URL}/health"
 curl -s "${BASE_URL}/health" | python -m json.tool
 
 echo ""
-echo "POST ${BASE_URL}/predict (category=${CATEGORY})"
+echo "POST ${BASE_URL}/predict (category=${CATEGORY}, compact)"
 curl -s -X POST "${BASE_URL}/predict" \
   -F "category=${CATEGORY}" \
-  -F "include_images=true" \
+  -F "include_images=false" \
   -F "include_debug=false" \
   -F "file=@${IMAGE_PATH}" | python -m json.tool
+
+echo ""
+echo "Tip: save full response with include_images=true to examples/response_full_sample.json"
