@@ -19,29 +19,31 @@
   },
   "boxes": [
     {
-      "x": 100,
-      "y": 184,
-      "w": 7,
-      "h": 10,
-      "area": 42.0,
-      "mean_z": 2.635521650314331,
-      "max_z": 6.720283508300781,
-      "score": 2.635521650314331
-    },
-    {
       "x": 112,
       "y": 223,
-      "w": 48,
+      "w": 49,
       "h": 22,
-      "area": 588.0,
-      "mean_z": 2.4493355751037598,
+      "area": 597.0,
+      "mean_z": 2.379819393157959,
       "max_z": 8.661852836608887,
-      "score": 2.4493355751037598
+      "score": 2.379819393157959,
+      "foreground_ratio": 0.9461966753005981
+    },
+    {
+      "x": 186,
+      "y": 115,
+      "w": 31,
+      "h": 19,
+      "area": 211.0,
+      "mean_z": 2.3173177242279053,
+      "max_z": 12.303435325622559,
+      "score": 2.3173177242279053,
+      "foreground_ratio": 1.0
     }
   ],
   "debug": {
-    "bbox_method": "conservative_connected_components_on_z_map",
-    "localization_note": "Bounding boxes are approximate suspicious regions derived from reconstruction error maps.",
+    "bbox_method": "foreground_masked_conservative_connected_components_on_z_map",
+    "localization_note": "Bounding boxes are generated from category-normalized reconstruction error maps constrained to the estimated product foreground. Boxes are approximate visual hints.",
     "latency_ms": 78.73
   }
 }

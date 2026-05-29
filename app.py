@@ -107,18 +107,19 @@ def _boxes_block(results: Dict[str, Any]) -> list[Dict[str, float | int]]:
   """
     serialized: list[Dict[str, float | int]] = []
     for box in results["boxes"]:
-        serialized.append(
-            {
-                "x": int(box["x"]),
-                "y": int(box["y"]),
-                "w": int(box["w"]),
-                "h": int(box["h"]),
-                "area": float(box["area"]),
-                "mean_z": float(box["mean_z"]),
-                "max_z": float(box["max_z"]),
-                "score": float(box["score"]),
-            }
-        )
+        entry: Dict[str, float | int] = {
+            "x": int(box["x"]),
+            "y": int(box["y"]),
+            "w": int(box["w"]),
+            "h": int(box["h"]),
+            "area": float(box["area"]),
+            "mean_z": float(box["mean_z"]),
+            "max_z": float(box["max_z"]),
+            "score": float(box["score"]),
+        }
+        if "foreground_ratio" in box:
+            entry["foreground_ratio"] = float(box["foreground_ratio"])
+        serialized.append(entry)
     return serialized
 
 
@@ -173,6 +174,7 @@ def _build_predict_payload(
         payload["debug_images"] = {
             "error_map": _encode_data_url(results["error_map_gray"]),
             "z_map_gray": _encode_data_url(results["z_map_gray"]),
+            "product_mask": _encode_data_url(results["product_mask_gray"]),
         }
 
     return payload

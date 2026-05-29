@@ -43,12 +43,19 @@ SCORE_NAME = "top_1_z_score"
 IMAGE_SIZE = 256
 MIN_MODEL_BYTES = 1_000
 LOCALIZATION_METHOD = "category-normalized reconstruction error"
+BBOX_METHOD = "foreground_masked_conservative_connected_components_on_z_map"
 METADATA_NOTE = (
-    "Bounding boxes are approximate suspicious regions derived from "
-    "reconstruction error maps."
+    "Bounding boxes are generated from category-normalized reconstruction error maps "
+    "constrained to the estimated product foreground. Boxes are approximate visual hints."
 )
 LIMITATION_NOTE = METADATA_NOTE
 BBOX_NOTE = METADATA_NOTE
+
+PRODUCT_MASK_MIN_AREA_RATIO = 0.03
+PRODUCT_MASK_MAX_AREA_RATIO = 0.85
+BOX_MIN_FOREGROUND_RATIO = 0.25
+BOX_BORDER_FOREGROUND_RATIO = 0.4
+BOX_BORDER_MARGIN = 3
 
 METADATA_OUTPUTS = ["original", "reconstruction", "heatmap", "mask"]
 
@@ -403,6 +410,108 @@ def _get_category_threshold(thresholds: Dict[str, Any], category: str) -> float:
     return float(thresholds["z_score_thresholds"][category]["threshold"])
 
 
+def compute_product_mask(
+    original_rgb: np.ndarray,
+    category: str | None = None,
+) -> np.ndarray:
+    """
+    Estimate a binary product/foreground mask [H, W] with 1 on the object and 0 on background.
+
+    Uses Otsu thresholding on grayscale, picks the polarity whose largest connected
+    component is central and has plausible area, then morphologically closes and dilates.
+
+    ``original_rgb`` is a float array [H, W, 3] in [0, 1]. ``category`` is reserved for
+    future category-specific tuning.
+    """
+    del category  # reserved for future per-category foreground heuristics
+
+    height, width = original_rgb.shape[:2]
+    gray = cv2.cvtColor(
+        (np.clip(original_rgb, 0.0, 1.0) * 255).astype(np.uint8), cv2.COLOR_RGB2GRAY
+    )
+    _, otsu = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+    image_center_x = width / 2.0
+    image_center_y = height / 2.0
+    max_center_distance = float(
+        np.hypot(image_center_x, image_center_y)
+    ) or 1.0
+    total_pixels = float(height * width)
+
+    best_component: np.ndarray | None = None
+    best_score = -1.0
+
+    for candidate in (otsu, 255 - otsu):
+        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
+            candidate, connectivity=8
+        )
+        if num_labels <= 1:
+            continue
+
+        component_areas = stats[1:, cv2.CC_STAT_AREA]
+        largest_idx = 1 + int(np.argmax(component_areas))
+        area = float(stats[largest_idx, cv2.CC_STAT_AREA])
+        area_ratio = area / total_pixels
+
+        centroid_x, centroid_y = centroids[largest_idx]
+        center_distance = float(
+            np.hypot(centroid_x - image_center_x, centroid_y - image_center_y)
+        )
+        centrality = 1.0 - min(center_distance / max_center_distance, 1.0)
+
+        area_plausible = (
+            PRODUCT_MASK_MIN_AREA_RATIO <= area_ratio <= PRODUCT_MASK_MAX_AREA_RATIO
+        )
+        area_score = 1.0 if area_plausible else max(0.0, 1.0 - abs(area_ratio - 0.35))
+        score = area_score * 0.55 + centrality * 0.45
+
+        if score > best_score:
+            best_score = score
+            best_component = (labels == largest_idx).astype(np.uint8)
+
+    if best_component is None:
+        best_component = np.ones((height, width), dtype=np.uint8)
+
+    closed = cv2.morphologyEx(
+        best_component * 255, cv2.MORPH_CLOSE, np.ones((7, 7), np.uint8)
+    )
+    dilated = cv2.dilate(closed, np.ones((5, 5), np.uint8), iterations=1)
+    return (dilated > 0).astype(np.float32)
+
+
+def _box_foreground_ratio(
+    product_mask: np.ndarray, x: int, y: int, w: int, h: int
+) -> float:
+    """Mean foreground coverage inside a bounding box."""
+    if w <= 0 or h <= 0:
+        return 0.0
+    region = product_mask[y : y + h, x : x + w]
+    if region.size == 0:
+        return 0.0
+    return float(np.mean(region))
+
+
+def _box_touches_border(x: int, y: int, w: int, h: int, size: int = IMAGE_SIZE) -> bool:
+    return (
+        x < BOX_BORDER_MARGIN
+        or y < BOX_BORDER_MARGIN
+        or x + w > size - BOX_BORDER_MARGIN
+        or y + h > size - BOX_BORDER_MARGIN
+    )
+
+
+def _passes_foreground_filter(
+    product_mask: np.ndarray, x: int, y: int, w: int, h: int
+) -> bool:
+    """Reject boxes that sit mostly on background or hug image borders without foreground."""
+    foreground_ratio = _box_foreground_ratio(product_mask, x, y, w, h)
+    if foreground_ratio < BOX_MIN_FOREGROUND_RATIO:
+        return False
+    if _box_touches_border(x, y, w, h) and foreground_ratio < BOX_BORDER_FOREGROUND_RATIO:
+        return False
+    return True
+
+
 def _normalize_heatmap(z_map: np.ndarray) -> np.ndarray:
     """Normalize the z-map to an unsigned 8-bit heatmap for visualization."""
     if z_map.size == 0:
@@ -446,12 +555,13 @@ def _extract_approximate_boxes(
     z_map: np.ndarray,
     mask: np.ndarray,
     bbox_config: Dict[str, Any],
+    product_mask: np.ndarray | None = None,
 ) -> List[Dict[str, Any]]:
     """
-    Derive approximate bounding boxes from connected components on the z-map.
+    Derive approximate bounding boxes from connected components on a (masked) z-map.
 
     Coordinates are in the 256x256 model space for client-side drawing.
-    Not supervised object detection (e.g. YOLO).
+    Boxes overlapping background are filtered using ``product_mask``.
     """
     bbox_settings = bbox_config["bounding_boxes"]
     min_area = int(bbox_settings["min_area"])
@@ -467,24 +577,33 @@ def _extract_approximate_boxes(
         if area < min_area or area > max_area or w == 0 or h == 0:
             continue
 
+        if product_mask is not None and not _passes_foreground_filter(
+            product_mask, int(x), int(y), int(w), int(h)
+        ):
+            continue
+
         region = z_map[y : y + h, x : x + w]
         mean_z = float(np.mean(region))
         max_z = float(np.max(region))
         if mean_z < min_mean_z:
             continue
 
-        candidates.append(
-            {
-                "x": int(x),
-                "y": int(y),
-                "w": int(w),
-                "h": int(h),
-                "area": float(area),
-                "mean_z": mean_z,
-                "max_z": max_z,
-                "score": mean_z,
-            }
-        )
+        box: Dict[str, Any] = {
+            "x": int(x),
+            "y": int(y),
+            "w": int(w),
+            "h": int(h),
+            "area": float(area),
+            "mean_z": mean_z,
+            "max_z": max_z,
+            "score": mean_z,
+        }
+        if product_mask is not None:
+            box["foreground_ratio"] = _box_foreground_ratio(
+                product_mask, int(x), int(y), int(w), int(h)
+            )
+
+        candidates.append(box)
 
     candidates.sort(key=lambda item: item["score"], reverse=True)
     return candidates[:max_boxes]
@@ -560,12 +679,13 @@ def predict(
     is_anomaly = top_1_z_score > threshold
     status = "anomaly" if is_anomaly else "normal"
 
-    mask = _build_localization_mask(z_map, artifacts.bbox_config)
-    boxes = _extract_approximate_boxes(z_map, mask, artifacts.bbox_config)
-    bbox_method = str(
-        artifacts.bbox_config.get("bounding_boxes", {}).get(
-            "method", "conservative_connected_components_on_z_map"
-        )
+    original_rgb = np.array(resized_original.convert("RGB"), dtype=np.float32) / 255.0
+    product_mask = compute_product_mask(original_rgb, category)
+    z_map_masked = z_map * product_mask
+
+    mask = _build_localization_mask(z_map_masked, artifacts.bbox_config)
+    boxes = _extract_approximate_boxes(
+        z_map_masked, mask, artifacts.bbox_config, product_mask
     )
 
     return {
@@ -578,7 +698,7 @@ def predict(
         "boxes": boxes,
         "error_mean": float(np.mean(error_map)),
         "z_map_max": float(np.max(z_map)),
-        "bbox_method": bbox_method,
+        "bbox_method": BBOX_METHOD,
         "original_image": resized_original,
         "reconstructed_image": _tensor_to_pil_image(reconstruction),
         "heatmap_colored": _build_colored_heatmap_image(z_map),
@@ -586,4 +706,7 @@ def predict(
         "overlay": _build_overlay_image(resized_original, boxes, artifacts.bbox_config),
         "error_map_gray": _normalize_array_to_gray_image(error_map),
         "z_map_gray": _normalize_array_to_gray_image(z_map),
+        "product_mask_gray": Image.fromarray(
+            (product_mask * 255).astype(np.uint8), mode="L"
+        ),
     }

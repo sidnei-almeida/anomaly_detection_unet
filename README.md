@@ -223,11 +223,12 @@ When running Docker or `uvicorn` on your machine, use `http://localhost:7860` in
       "area": 42.0,
       "mean_z": 2.635521650314331,
       "max_z": 6.720283508300781,
-      "score": 2.635521650314331
+      "score": 2.635521650314331,
+      "foreground_ratio": 0.9461966753005981
     }
   ],
   "debug": {
-    "bbox_method": "conservative_connected_components_on_z_map",
+    "bbox_method": "foreground_masked_conservative_connected_components_on_z_map",
     "localization_note": "Bounding boxes are approximate suspicious regions derived from reconstruction error maps.",
     "latency_ms": 78.73
   }
@@ -280,7 +281,11 @@ Prefer drawing from the `boxes` array; `images.overlay` is optional server-side 
 
 ## Approximate bounding boxes
 
-Boxes are **heuristic regions** from reconstruction error maps — **not** supervised detection (YOLO, etc.). Use them as visual hints, not ground-truth segmentation.
+Boxes are generated from **category-normalized reconstruction error maps constrained to the estimated product foreground** (Otsu-based product mask). They are **approximate visual hints** — not supervised detection (YOLO, etc.). Use them to highlight suspicious regions on the object, not as ground-truth segmentation.
+
+Each box may include `foreground_ratio` (0–1): overlap with the estimated product region. Boxes with low foreground coverage are discarded server-side.
+
+With `include_debug=true`, the API also returns `debug_images.product_mask` showing the estimated object region used to mask localization.
 
 ---
 
