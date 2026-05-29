@@ -7,7 +7,7 @@ sdk: docker
 app_port: 7860
 pinned: false
 license: mit
-short_description: Multi-category MVTec AD anomaly inspection API (DenoisingConvAutoencoder)
+short_description: MVTec AD multi-category visual anomaly detection API
 tags:
   - anomaly-detection
   - computer-vision
