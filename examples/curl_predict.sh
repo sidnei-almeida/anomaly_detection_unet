@@ -1,22 +1,24 @@
 #!/usr/bin/env bash
-# Example: call POST /predict on local Docker or Hugging Face Space (port 7860).
+# Example: call POST /predict on the Hugging Face Space API.
 
 set -euo pipefail
 
-BASE_URL="${BASE_URL:-http://localhost:7860}"
-IMAGE_PATH="${1:-examples/bottle_anomaly.png}"
+BASE_URL="${BASE_URL:-https://salmeida-bottle-anomaly-detection.hf.space}"
+IMAGE_PATH="${1:-imagem/anomaly_1.png}"
 CATEGORY="${2:-bottle}"
 
+echo "API base: ${BASE_URL}"
+echo ""
 echo "GET ${BASE_URL}/health"
-curl -s "${BASE_URL}/health" | python -m json.tool
+curl -sS "${BASE_URL}/health" | python -m json.tool
 
 echo ""
 echo "POST ${BASE_URL}/predict (category=${CATEGORY}, compact)"
-curl -s -X POST "${BASE_URL}/predict" \
+curl -sS -X POST "${BASE_URL}/predict" \
   -F "category=${CATEGORY}" \
   -F "include_images=false" \
   -F "include_debug=false" \
   -F "file=@${IMAGE_PATH}" | python -m json.tool
 
 echo ""
-echo "Tip: save full response with include_images=true to examples/response_full_sample.json"
+echo "Full response: BASE_URL=${BASE_URL} include_images=true file=@${IMAGE_PATH} > examples/response_full_sample.json"

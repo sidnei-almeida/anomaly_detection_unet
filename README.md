@@ -34,7 +34,22 @@ Designed for **Hugging Face Spaces (Docker)** and local Docker runs on port **78
 | `/infer` | POST | Legacy alias (deprecated) |
 
 **Project name:** `visual-anomaly-inspection-api`  
-**Swagger UI:** `/docs`
+
+### Base URL (production)
+
+```text
+https://salmeida-bottle-anomaly-detection.hf.space
+```
+
+| Resource | URL |
+|----------|-----|
+| API root | https://salmeida-bottle-anomaly-detection.hf.space/ |
+| Swagger UI | https://salmeida-bottle-anomaly-detection.hf.space/docs |
+| Health | https://salmeida-bottle-anomaly-detection.hf.space/health |
+| Metadata | https://salmeida-bottle-anomaly-detection.hf.space/metadata |
+| Predict | `POST` https://salmeida-bottle-anomaly-detection.hf.space/predict |
+
+Space page: https://huggingface.co/spaces/salmeida/bottle-anomaly-detection
 
 ---
 
@@ -130,12 +145,18 @@ export PORT=7860
 
 ## Example request
 
+Set the API base URL (production Hugging Face Space):
+
+```bash
+export API_BASE_URL="https://salmeida-bottle-anomaly-detection.hf.space"
+```
+
 Compact response (no base64 — recommended for integrations and README):
 
 ```bash
-curl -s http://localhost:7860/health | jq
+curl -s "${API_BASE_URL}/health" | jq
 
-curl -s -X POST "http://localhost:7860/predict" \
+curl -s -X POST "${API_BASE_URL}/predict" \
   -F "category=bottle" \
   -F "include_images=false" \
   -F "file=@imagem/anomaly_1.png" \
@@ -145,19 +166,23 @@ curl -s -X POST "http://localhost:7860/predict" \
 Full response with images (`include_images=true`):
 
 ```bash
-curl -s -X POST "http://localhost:7860/predict" \
+curl -s -X POST "${API_BASE_URL}/predict" \
   -F "category=bottle" \
   -F "include_images=true" \
   -F "file=@imagem/anomaly_1.png" \
   -o examples/response_full_sample.json
 ```
 
-Or use the helper script:
+Or use the helper script (defaults to the HF Space URL):
 
 ```bash
 chmod +x examples/curl_predict.sh
-./examples/curl_predict.sh
+./examples/curl_predict.sh imagem/anomaly_1.png bottle
 ```
+
+### Local development only
+
+When running Docker or `uvicorn` on your machine, use `http://localhost:7860` instead of `API_BASE_URL`.
 
 ---
 

@@ -74,3 +74,4 @@ logs/
 
 # Submodules
 road_sign_detection_yolo/
+examples/curl_predict.sh

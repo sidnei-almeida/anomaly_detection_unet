@@ -1,6 +1,12 @@
 visual-anomaly-inspection-api — Endpoints
 ==========================================
 
+Base URL (production):
+  https://salmeida-bottle-anomaly-detection.hf.space
+
+Local dev:
+  http://localhost:7860
+
 GET /
   api_name, status, message, docs_url, health_url, metadata_url, predict_url
 
@@ -22,3 +28,10 @@ POST /infer  (legacy, deprecated — query category)
 
 Port: 7860 (Hugging Face Spaces / Docker)
 CORS: CORS_ORIGINS env (default *)
+
+Exemplo:
+curl -s "https://salmeida-bottle-anomaly-detection.hf.space/health" | jq
+curl -s -X POST "https://salmeida-bottle-anomaly-detection.hf.space/predict" \
+  -F "category=bottle" \
+  -F "include_images=false" \
+  -F "file=@imagem/anomaly_1.png" | jq '.status, .scores, .boxes'
