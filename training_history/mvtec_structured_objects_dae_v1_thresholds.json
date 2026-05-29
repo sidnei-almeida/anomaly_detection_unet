@@ -1,0 +1,93 @@
+{
+    "experiment_name": "mvtec_structured_objects_dae_v1",
+    "created_at": "2026-05-29T02:42:59.514294",
+    "recommended_score": "top_1_z_score",
+    "recommended_threshold_type": "category_specific",
+    "recommended_threshold_percentile": 95,
+    "notes": {
+        "mean_score": "Global mean reconstruction error performed poorly because small defects were diluted.",
+        "top_1_z_score": "Recommended score. Computed from the top 1 percent of category-normalized reconstruction error map.",
+        "category_specific_thresholds": "Recommended because each product category has different reconstruction error distribution."
+    },
+    "raw_top_1_thresholds": {
+        "bottle": 0.11872500479221344,
+        "capsule": 0.06179470084607601,
+        "hazelnut": 0.061386146955192074,
+        "metal_nut": 0.12103985697031021,
+        "pill": 0.05940623581409454,
+        "screw": 0.08770701736211776,
+        "zipper": 0.13869296312332152
+    },
+    "z_score_thresholds": {
+        "bottle": {
+            "threshold": 3.911202907562254,
+            "percentile": 95,
+            "score_name": "top_1_z_score",
+            "validation_samples": 33,
+            "validation_mean": 2.4273168245951333,
+            "validation_std": 0.7870804682540476,
+            "validation_min": 1.6220312118530273,
+            "validation_max": 5.092931270599365
+        },
+        "capsule": {
+            "threshold": 2.9772779464721677,
+            "percentile": 95,
+            "score_name": "top_1_z_score",
+            "validation_samples": 27,
+            "validation_mean": 2.0062331005379006,
+            "validation_std": 0.4904703933597396,
+            "validation_min": 1.3828452825546265,
+            "validation_max": 3.1392056941986084
+        },
+        "hazelnut": {
+            "threshold": 3.5814246535301204,
+            "percentile": 95,
+            "score_name": "top_1_z_score",
+            "validation_samples": 60,
+            "validation_mean": 2.736259146531423,
+            "validation_std": 0.5170763375373757,
+            "validation_min": 1.9583691358566284,
+            "validation_max": 4.0224833488464355
+        },
+        "metal_nut": {
+            "threshold": 2.29191358089447,
+            "percentile": 95,
+            "score_name": "top_1_z_score",
+            "validation_samples": 23,
+            "validation_mean": 1.9962631826815398,
+            "validation_std": 0.19393119983759396,
+            "validation_min": 1.671107530593872,
+            "validation_max": 2.331625461578369
+        },
+        "pill": {
+            "threshold": 3.8539376258850098,
+            "percentile": 95,
+            "score_name": "top_1_z_score",
+            "validation_samples": 41,
+            "validation_mean": 3.1671605052017586,
+            "validation_std": 0.37544321862339214,
+            "validation_min": 2.475931167602539,
+            "validation_max": 4.113276481628418
+        },
+        "screw": {
+            "threshold": 4.3647784233093265,
+            "percentile": 95,
+            "score_name": "top_1_z_score",
+            "validation_samples": 53,
+            "validation_mean": 3.6941133895010316,
+            "validation_std": 0.4403132350583453,
+            "validation_min": 2.878032684326172,
+            "validation_max": 4.6494035720825195
+        },
+        "zipper": {
+            "threshold": 5.174765324592587,
+            "percentile": 95,
+            "score_name": "top_1_z_score",
+            "validation_samples": 42,
+            "validation_mean": 1.8859050529343742,
+            "validation_std": 1.2537948897705062,
+            "validation_min": 0.983710765838623,
+            "validation_max": 5.87895393371582
+        }
+    }
+}

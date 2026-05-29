@@ -1,0 +1,27 @@
+{
+    "experiment_name": "mvtec_structured_objects_dae_v1",
+    "model_name": "multi_product_denoising_conv_autoencoder",
+    "created_at": "2026-05-29T02:43:34.701729",
+    "artifacts": {
+        "model": "mvtec_structured_objects_dae_v1_best_model.pt",
+        "training_history": "mvtec_structured_objects_dae_v1_training_history.json",
+        "experiment_config": "mvtec_structured_objects_dae_v1_config.json",
+        "thresholds": "mvtec_structured_objects_dae_v1_thresholds.json",
+        "bbox_visualization_config": "mvtec_structured_objects_dae_v1_bbox_visualization_config.json",
+        "final_metrics": "mvtec_structured_objects_dae_v1_final_metrics.json",
+        "category_error_profiles": "mvtec_structured_objects_dae_v1_category_error_profiles.npz",
+        "error_profile_metadata": "mvtec_structured_objects_dae_v1_error_profile_metadata.json"
+    },
+    "recommended_inference_pipeline": [
+        "load model",
+        "load category error profiles",
+        "preprocess image to 256x256 RGB tensor in [0, 1]",
+        "reconstruct image with autoencoder",
+        "compute absolute reconstruction error map",
+        "normalize error map using category mean/std profile",
+        "compute top_1_z_score",
+        "compare score against category-specific threshold",
+        "generate heatmap and approximate bounding boxes from z-map",
+        "return status, score, threshold, heatmap, boxes and reconstruction"
+    ]
+}

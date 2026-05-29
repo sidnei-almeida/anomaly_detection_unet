@@ -1,0 +1,192 @@
+{
+    "experiment_name": "mvtec_structured_objects_dae_v1",
+    "created_at": "2026-05-29T02:43:10.336839",
+    "recommended_score": "top_1_z_score",
+    "threshold_type": "category_specific",
+    "threshold_percentile": 95,
+    "global_metrics": {
+        "roc_auc": 0.7161462624265391,
+        "average_precision": 0.9020346128952894,
+        "accuracy": 0.7559912854030502,
+        "precision_anomaly": 0.8421787709497207,
+        "recall_anomaly": 0.8445378151260504,
+        "f1_anomaly": 0.8433566433566434,
+        "confusion_matrix": [
+            [
+                91,
+                113
+            ],
+            [
+                111,
+                603
+            ]
+        ]
+    },
+    "score_comparison": {
+        "mean_z_score": {
+            "roc_auc": 0.6035590706870984,
+            "average_precision": 0.8406836571930407
+        },
+        "top_1_z_score": {
+            "roc_auc": 0.7161462624265391,
+            "average_precision": 0.9020346128952894
+        },
+        "top_5_z_score": {
+            "roc_auc": 0.6959823144944253,
+            "average_precision": 0.8964288762293398
+        },
+        "max_z_score": {
+            "roc_auc": 0.6704701488438511,
+            "average_precision": 0.8694897869298513
+        }
+    },
+    "category_metrics": {
+        "bottle": {
+            "samples": 83,
+            "normal_samples": 20,
+            "anomaly_samples": 63,
+            "confusion_matrix": [
+                [
+                    16,
+                    4
+                ],
+                [
+                    3,
+                    60
+                ]
+            ],
+            "accuracy": 0.9156626506024096,
+            "precision_anomaly": 0.9375,
+            "recall_anomaly": 0.9523809523809523,
+            "f1_anomaly": 0.9448818897637795,
+            "roc_auc": 0.9222222222222222,
+            "average_precision": 0.9712370188847135
+        },
+        "capsule": {
+            "samples": 132,
+            "normal_samples": 23,
+            "anomaly_samples": 109,
+            "confusion_matrix": [
+                [
+                    14,
+                    9
+                ],
+                [
+                    24,
+                    85
+                ]
+            ],
+            "accuracy": 0.75,
+            "precision_anomaly": 0.9042553191489362,
+            "recall_anomaly": 0.7798165137614679,
+            "f1_anomaly": 0.8374384236453202,
+            "roc_auc": 0.7546868767451137,
+            "average_precision": 0.9243536425590771
+        },
+        "hazelnut": {
+            "samples": 110,
+            "normal_samples": 40,
+            "anomaly_samples": 70,
+            "confusion_matrix": [
+                [
+                    16,
+                    24
+                ],
+                [
+                    2,
+                    68
+                ]
+            ],
+            "accuracy": 0.7636363636363637,
+            "precision_anomaly": 0.7391304347826086,
+            "recall_anomaly": 0.9714285714285714,
+            "f1_anomaly": 0.8395061728395061,
+            "roc_auc": 0.8885714285714286,
+            "average_precision": 0.9310741189752756
+        },
+        "metal_nut": {
+            "samples": 115,
+            "normal_samples": 22,
+            "anomaly_samples": 93,
+            "confusion_matrix": [
+                [
+                    2,
+                    20
+                ],
+                [
+                    2,
+                    91
+                ]
+            ],
+            "accuracy": 0.808695652173913,
+            "precision_anomaly": 0.8198198198198198,
+            "recall_anomaly": 0.978494623655914,
+            "f1_anomaly": 0.8921568627450981,
+            "roc_auc": 0.5503421309872922,
+            "average_precision": 0.8659817139856418
+        },
+        "pill": {
+            "samples": 167,
+            "normal_samples": 26,
+            "anomaly_samples": 141,
+            "confusion_matrix": [
+                [
+                    0,
+                    26
+                ],
+                [
+                    0,
+                    141
+                ]
+            ],
+            "accuracy": 0.844311377245509,
+            "precision_anomaly": 0.844311377245509,
+            "recall_anomaly": 1.0,
+            "f1_anomaly": 0.9155844155844156,
+            "roc_auc": 0.7662302236770322,
+            "average_precision": 0.9383024891433599
+        },
+        "screw": {
+            "samples": 160,
+            "normal_samples": 41,
+            "anomaly_samples": 119,
+            "confusion_matrix": [
+                [
+                    14,
+                    27
+                ],
+                [
+                    6,
+                    113
+                ]
+            ],
+            "accuracy": 0.79375,
+            "precision_anomaly": 0.8071428571428572,
+            "recall_anomaly": 0.9495798319327731,
+            "f1_anomaly": 0.8725868725868726,
+            "roc_auc": 0.7015781922525108,
+            "average_precision": 0.8564202102612135
+        },
+        "zipper": {
+            "samples": 151,
+            "normal_samples": 32,
+            "anomaly_samples": 119,
+            "confusion_matrix": [
+                [
+                    29,
+                    3
+                ],
+                [
+                    74,
+                    45
+                ]
+            ],
+            "accuracy": 0.4900662251655629,
+            "precision_anomaly": 0.9375,
+            "recall_anomaly": 0.37815126050420167,
+            "f1_anomaly": 0.5389221556886228,
+            "roc_auc": 0.7925420168067228,
+            "average_precision": 0.9297449376269451
+        }
+    }
+}

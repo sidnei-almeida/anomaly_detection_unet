@@ -1,0 +1,54 @@
+{
+    "experiment_name": "mvtec_structured_objects_dae_v1",
+    "model_name": "multi_product_denoising_conv_autoencoder",
+    "model_class": "DenoisingConvAutoencoder",
+    "model_file": "mvtec_structured_objects_dae_v1_best_model.pt",
+    "created_at": "2026-05-29T02:42:53.868189",
+    "dataset": {
+        "name": "MVTec AD",
+        "source": "Kaggle mirror: ipythonx/mvtec-ad",
+        "selected_categories": [
+            "bottle",
+            "capsule",
+            "hazelnut",
+            "metal_nut",
+            "pill",
+            "screw",
+            "zipper"
+        ],
+        "train_samples": 1587,
+        "validation_samples": 279,
+        "test_samples": 918,
+        "test_normal_samples": 204,
+        "test_anomaly_samples": 714
+    },
+    "preprocessing": {
+        "image_size": 256,
+        "channels": 3,
+        "normalization": "ToTensor only; pixel range [0, 1]",
+        "resize": [
+            256,
+            256
+        ]
+    },
+    "training": {
+        "batch_size": 16,
+        "epochs": 100,
+        "initial_learning_rate": 0.001,
+        "noise_factor": 0.04,
+        "loss_function": "L1Loss",
+        "optimizer": "Adam",
+        "weight_decay": 1e-05,
+        "scheduler": "ReduceLROnPlateau",
+        "scheduler_factor": 0.5,
+        "scheduler_patience": 8
+    },
+    "architecture": {
+        "type": "Denoising convolutional autoencoder",
+        "latent_channels": 256,
+        "encoder_downsampling": "256x256 -> 16x16",
+        "output_activation": "Sigmoid",
+        "total_parameters": 1381443,
+        "trainable_parameters": 1381443
+    }
+}
