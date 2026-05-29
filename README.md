@@ -7,7 +7,7 @@ sdk: docker
 app_port: 7860
 pinned: false
 license: mit
-short_description: MVTec AD multi-category visual anomaly detection API
+short_description: MVTec AD bottle visual anomaly detection API
 tags:
   - anomaly-detection
   - computer-vision
@@ -17,7 +17,9 @@ tags:
 
 # visual-anomaly-inspection-api
 
-**FastAPI** service for multi-category visual anomaly inspection on **MVTec AD structured objects**, powered by experiment **`mvtec_structured_objects_dae_v1`** (`multi_product_denoising_conv_autoencoder`).
+**FastAPI** service for **bottle** visual anomaly inspection on **MVTec AD**, powered by experiment **`mvtec_structured_objects_dae_v1`** (`multi_product_denoising_conv_autoencoder`).
+
+This deployment is **bottle-only**: the underlying checkpoint was trained on multiple MVTec categories, but the public API accepts only `category=bottle` for reliable results.
 
 Designed for **Hugging Face Spaces (Docker)** and local Docker runs on port **7860**.
 
@@ -60,12 +62,12 @@ Space page: https://huggingface.co/spaces/salmeida/bottle-anomaly-detection
 | Architecture | `DenoisingConvAutoencoder` |
 | Training | Denoising conv autoencoder, L1 loss, 256×256 RGB |
 | Score | `top_1_z_score` (mean of top 1% z-map pixels) |
-| Thresholds | Per-category, from validation (`thresholds.json`) |
+| Thresholds | Bottle-specific, from validation (`thresholds.json`) |
 | Localization | Category-normalized reconstruction error → heatmap, mask, approximate boxes |
 
-### Supported categories
+### Supported category
 
-`bottle` · `capsule` · `hazelnut` · `metal_nut` · `pill` · `screw` · `zipper`
+**`bottle`** only. Other MVTec categories are rejected with HTTP 400.
 
 ---
 
@@ -88,8 +90,8 @@ All inference files live under `models/mvtec_structured_objects_dae_v1/`:
 Startup validates:
 
 - `.pt` exists and is not a tiny Git LFS pointer  
-- Every category has `{category}_mean` / `{category}_std` in the `.npz`  
-- Every category has a threshold in `thresholds.json`
+- **Bottle** has `bottle_mean` / `bottle_std` in the `.npz`  
+- **Bottle** has a threshold in `thresholds.json`
 
 > **Legacy (unused):** `models/legacy/bottle_unet_*` — old bottle-only U-Net; safe to ignore.
 

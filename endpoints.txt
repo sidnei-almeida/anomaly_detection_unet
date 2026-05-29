@@ -1,5 +1,5 @@
-visual-anomaly-inspection-api — Endpoints
-==========================================
+visual-anomaly-inspection-api — Endpoints (bottle-only)
+=========================================================
 
 Base URL (production):
   https://salmeida-bottle-anomaly-detection.hf.space
@@ -7,30 +7,15 @@ Base URL (production):
 Local dev:
   http://localhost:7860
 
+Supported category: bottle
+
 GET /
-  api_name, status, message, docs_url, health_url, metadata_url, predict_url
-
 GET /health
-  status: ready | loading | error
-  model_loaded, profiles_loaded, thresholds_loaded, bbox_config_loaded
-  supported_categories_count: 7
-  device: cpu | cuda
-  error (when startup validation fails)
-
 GET /metadata
-  api_name, experiment_name, model_name, supported_categories
-  image_size: 256, score_name, outputs, localization_method, note
-
-POST /predict  (multipart)
-  file, category, include_images=true, include_debug=false, include_overlay=false
-
-POST /infer  (legacy, deprecated — query category)
-
-Port: 7860 (Hugging Face Spaces / Docker)
-CORS: CORS_ORIGINS env (default *)
+POST /predict  (multipart: file, category=bottle, include_images, include_debug, include_overlay)
+POST /infer    (legacy alias)
 
 Exemplo:
-curl -s "https://salmeida-bottle-anomaly-detection.hf.space/health" | jq
 curl -s -X POST "https://salmeida-bottle-anomaly-detection.hf.space/predict" \
   -F "category=bottle" \
   -F "include_images=false" \

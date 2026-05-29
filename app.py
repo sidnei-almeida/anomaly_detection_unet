@@ -15,6 +15,7 @@ from PIL import Image, UnidentifiedImageError
 from model_utils import (
     API_NAME,
     BBOX_NOTE,
+    DEFAULT_CATEGORY,
     EXPERIMENT_NAME,
     IMAGE_SIZE,
     METADATA_NOTE,
@@ -46,8 +47,8 @@ app = FastAPI(
     title="Visual Anomaly Inspection API",
     version="3.1.0",
     description=(
-        "Hugging Face / Docker ready API for MVTec AD structured-object anomaly "
-        "detection using a multi-product DenoisingConvAutoencoder."
+        "Hugging Face / Docker ready API for MVTec AD bottle anomaly detection "
+        "using a DenoisingConvAutoencoder (bottle-only deployment)."
     ),
     contact={
         "name": "sidnei-almeida",
@@ -253,8 +254,8 @@ def metadata() -> Dict[str, Any]:
 async def predict_endpoint(
     file: UploadFile = File(..., description="RGB image (PNG or JPEG)."),
     category: str = Form(
-        ...,
-        description="MVTec category: bottle, capsule, hazelnut, metal_nut, pill, screw, zipper.",
+        DEFAULT_CATEGORY,
+        description="Product category. Only `bottle` is supported in this deployment.",
     ),
     include_images: bool = Form(True, description="Return visualization data URLs."),
     include_debug: bool = Form(False, description="Include debug_images grayscale maps."),
@@ -287,7 +288,10 @@ async def predict_endpoint(
 @app.post("/infer", summary="[Legacy] Alias for POST /predict", deprecated=True)
 async def infer(
     file: UploadFile = File(...),
-    category: str = Query(..., description="MVTec category (legacy query param)."),
+    category: str = Query(
+        DEFAULT_CATEGORY,
+        description="Product category. Only `bottle` is supported in this deployment.",
+    ),
     include_visualizations: bool = Query(True, description="Deprecated: use include_images."),
     include_images: Optional[bool] = Query(None),
     include_debug: bool = Query(False),

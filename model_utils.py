@@ -30,23 +30,17 @@ THRESHOLDS_PATH = EXPERIMENT_DIR / "thresholds.json"
 BBOX_CONFIG_PATH = EXPERIMENT_DIR / "bbox_visualization_config.json"
 CONFIG_PATH = EXPERIMENT_DIR / "config.json"
 MANIFEST_PATH = EXPERIMENT_DIR / "manifest.json"
-SUPPORTED_CATEGORIES = (
-    "bottle",
-    "capsule",
-    "hazelnut",
-    "metal_nut",
-    "pill",
-    "screw",
-    "zipper",
-)
+SUPPORTED_CATEGORIES = ("bottle",)
+DEFAULT_CATEGORY = "bottle"
 SCORE_NAME = "top_1_z_score"
 IMAGE_SIZE = 256
 MIN_MODEL_BYTES = 1_000
 LOCALIZATION_METHOD = "category-normalized reconstruction error"
 BBOX_METHOD = "foreground_masked_conservative_connected_components_on_z_map"
 METADATA_NOTE = (
-    "Bounding boxes are generated from category-normalized reconstruction error maps "
-    "constrained to the estimated product foreground. Boxes are approximate visual hints."
+    "Bottle-only deployment. Bounding boxes are generated from category-normalized "
+    "reconstruction error maps constrained to the estimated product foreground. "
+    "Boxes are approximate visual hints."
 )
 LIMITATION_NOTE = METADATA_NOTE
 BBOX_NOTE = METADATA_NOTE
