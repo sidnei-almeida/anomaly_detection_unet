@@ -1,50 +1,24 @@
-Bottle Anomaly Detection API – Endpoints
-========================================
+visual-anomaly-inspection-api — Endpoints
+==========================================
 
-1. GET /health
-   - Uso: Verifica se a API está pronta para receber requisições.
-   - Resposta 200:
-     {
-       "status": "ready" | "loading"
-     }
+GET /
+  api_name, status, message, docs_url, health_url, metadata_url, predict_url
 
-2. GET /
-   - Uso: Recupera metadados básicos da API e links para a documentação.
-   - Resposta 200:
-     {
-       "name": "...",
-       "version": "...",
-       "description": "...",
-       "docs": {
-         "openapi": "/openapi.json",
-         "swagger_ui": "/docs",
-         "redoc": "/redoc"
-       }
-     }
+GET /health
+  status: ready | loading | error
+  model_loaded, profiles_loaded, thresholds_loaded, bbox_config_loaded
+  supported_categories_count: 7
+  device: cpu | cuda
+  error (when startup validation fails)
 
-3. POST /infer
-   - Uso: Executa a inferência de anomalia em uma imagem RGB (PNG ou JPEG).
-   - Corpo (multipart/form-data):
-     • file (obrigatório): arquivo de imagem.
-     • include_visualizations (opcional, padrão true): retorna ou não artefatos em base64.
-   - Resposta 200:
-     {
-       "prediction": "Normal" | "Anomaly Detected",
-       "reconstruction_error": float,
-       "thresholds": {
-         "classification": float,
-         "pixel_visualization": float,
-         "bounding_box": float
-       },
-       "latency_ms": float,
-       "image_size": {
-         "width": int,
-         "height": int
-       },
-       "artifacts": { ... } // presente somente quando include_visualizations=true
-     }
+GET /metadata
+  api_name, experiment_name, model_name, supported_categories
+  image_size: 256, score_name, outputs, localization_method, note
 
-Observações:
-- Todos os retornos utilizam JSON.
-- O serviço roda em CPU, sem dependências de GPU.
+POST /predict  (multipart)
+  file, category, include_images=true, include_debug=false, include_overlay=false
 
+POST /infer  (legacy, deprecated — query category)
+
+Port: 7860 (Hugging Face Spaces / Docker)
+CORS: CORS_ORIGINS env (default *)

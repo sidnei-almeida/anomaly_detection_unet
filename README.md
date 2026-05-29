@@ -1,281 +1,218 @@
-<!-- Canonical repository: https://github.com/sidnei-almeida/anomaly_detection_unet -->
-<p align="center">
-  <img src="header.png" alt="Project banner — anomaly_detection_unet REST API" width="520" />
-</p>
+# visual-anomaly-inspection-api
 
-<h1 align="center">anomaly_detection_unet</h1>
+**FastAPI** service for multi-category visual anomaly inspection on **MVTec AD structured objects**, powered by experiment **`mvtec_structured_objects_dae_v1`** (`multi_product_denoising_conv_autoencoder`).
 
-<p align="center">
-  <strong>Production-oriented FastAPI REST service for bottle anomaly detection: a reconstructive U-Net trained on the MVTec AD &ldquo;bottle&rdquo; subset. No interactive CLI is part of this repository.</strong>
-</p>
-
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-0071C5?style=flat-square" alt="License: MIT" /></a>
-  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python 3.10+" /></a>
-  <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI" /></a>
-  <img src="https://img.shields.io/badge/PyTorch-CPU-EE4C2C?style=flat-square&logo=pytorch&logoColor=white" alt="PyTorch CPU" />
-</p>
-
-<p align="center">
-  <a href="#overview">Overview</a> ·
-  <a href="#gallery">Gallery</a> ·
-  <a href="#features">Features</a> ·
-  <a href="#requirements">Requirements</a> ·
-  <a href="#git-lfs-large-files">Git LFS</a> ·
-  <a href="#installation--quick-start">Quick start</a> ·
-  <a href="#api-reference">API</a> ·
-  <a href="#docker">Docker</a> ·
-  <a href="#deploying-to-hugging-face-spaces">Hugging Face</a> ·
-  <a href="#configuration">Configuration</a> ·
-  <a href="#project-layout">Project layout</a> ·
-  <a href="#troubleshooting">Troubleshooting</a> ·
-  <a href="#author">Author</a> ·
-  <a href="#license">License</a>
-</p>
+Designed for **Hugging Face Spaces (Docker)** and local Docker runs on port **7860**.
 
 ---
 
-## Overview
-
-**anomaly_detection_unet** exposes a compact **REST API**, not a command-line wizard. Inference lives entirely in **`app.py` + [`model_utils.py`](model_utils.py)**: FastAPI validates uploads while the U-Net runs in **eval** mode over CPU tensors. Detection is **reconstruction-based**: the network fits normal textures; deviations spike **mean squared error** between crop and reconstruction. Once the scalar error clears `classification_threshold` (see [`models/bottle_unet_config.json`](models/bottle_unet_config.json)), the classifier returns **Anomaly Detected** instead of **Normal**. Responses may optionally pack pixel artefacts (**map**, **binary mask**, **heatmap overlay**, **bounding box**) as PNG fragments encoded in **base64 JSON**.
-
-| Capability | Outcome |
-|------------|---------|
-| **`POST /infer`** | Multipart image ➝ label + diagnostics + latency. |
-| **Pixel artefacts** | OpenCV post-processing on anomaly maps feeding masks and ROI rectangles. |
-| **Stable serving footprint** | Weights/load config once on FastAPI `startup`; callers poll `/health` while loading completes. |
-| **Container-friendly Dockerfile** | Port **7860** matches Hugging Face Spaces conventions. |
-
-`run_app.sh` + [`requirements-gpu.txt`](requirements-gpu.txt) are **legacy exploratory** assets (historical Streamlit-oriented stack) and diverge from the shipping API path outlined below — treat **`uvicorn app:app`** as source of truth.
-
----
-
-## Gallery
-
-### Software — exploring the REST API
-
-Swagger UI at `/docs` lists the multipart `POST /infer` contract plus links generated from `/`. Snapshot below sits at **`softrware.png`** in the **repository root** (same paths as GitHub renders the README).
-
-<p align="center">
-  <img src="softrware.png" alt="FastAPI Swagger UI — bottle anomaly detection API" width="920" />
-</p>
-
-<p align="center">
-  <em><strong>Figure 1.</strong> Interactive OpenAPI tooling around the FastAPI app (local UI wording may vary slightly).</em>
-</p>
-
-### Example bottle crops (inputs you can POST to `/infer`)
-
-The **`imagem/`** directory keeps representative RGB crops (`000.png` baseline; `anomaly_*.png` defects). Upload them via Swagger, `curl`, etc.; they are omitted from Docker builds ([`.dockerignore`](.dockerignore)).
-
-| Normal (baseline) | Anomaly sample |
-|:---:|:---:|
-| ![](imagem/000.png) | ![](imagem/anomaly_1.png) |
-| *Figure 2a. Good bottle crop for smoke tests (`imagem/000.png`).* | *Figure 2b. Defect-rich crop (`imagem/anomaly_1.png`).* |
-
----
-
-## Features
-
-| Area | Description |
-|------|-------------|
-| **REST ergonomics** | Multipart uploads with browser-friendly docs at `/docs` and `/redoc`. |
-| **Optional artefacts** | Flip `include_visualizations=false` to skip heavy payloads. |
-| **Sanity-checked weights** | Startup refuses microscopic `.pth` blobs (often Git LFS pointer mistakes). |
-| **Relaxed default CORS** | Good for playgrounds — scope-down before production exposures. |
-
-Jupyter artefacts (`notebooks/`, `training_history/`) remain for reproducibility audits. README hero + Swagger screenshots (**`header.png`**, **`softrware.png`** at repo root) and demo crops under **`imagem/`** are documentation aids and **stay out** of the minimal runtime image enforced by `.dockerignore`.
-
----
-
-## Requirements
-
-| Component | Notes |
-|-----------|-------|
-| **Python** | 3.10+ (matches [`Dockerfile`](Dockerfile)). |
-| **Torch CPU** | Prebuilt wheels via [`requirements.txt`](requirements.txt). |
-| **Weights** | `models/bottle_unet_best.pth` — served through **Git LFS** (never commit raw multi‑hundred MB blobs to plain Git). |
-| **Imaging deps** | `opencv-python-headless`, `pillow`, `numpy` from requirements. |
-| **Git LFS** | Host-side client required so historical checkpoints hydrate after clone (see section below). |
-
-> **Operational notes:** **`docker build` only sees paths not excluded by [`.dockerignore`](.dockerignore)** — root-level README assets (`header.png`, `softrware.png`) and **`imagem/`** never bake into default images. Hydrate **`models/bottle_unet_best.pth`** to real binaries on the host (**`git lfs pull`**) *before* `docker build`; otherwise the layer will copy Git LFS text pointers (~130 bytes) and the runtime health check fails.
-
----
-
-## Git LFS (large files)
-
-This repository declares `*.pth`, `*.pt`, `*.ckpt`, and `*.safetensors` in [`.gitattributes`](.gitattributes). Without the Git LFS filter you will only checkout the **text pointers** (~130 bytes); `setup_model_and_config()` will then raise on “unexpectedly small” weights.
-
-Minimal workflow after cloning:
-
-```bash
-# Install the Git LFS client from your distro or https://git-lfs.github.com/, then:
-git lfs install        # once per user account / machine shell
-git lfs pull           # inside the cloned repo whenever pointers need hydrating
-git lfs ls-files       # should list models/bottle_unet_best.pth
-```
-
-Step-by-step (in Portuguese, distros HF/CI hints): **[`GIT_LFS.md`](GIT_LFS.md)**.
-
----
-
-## Installation & quick start
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-
-uvicorn app:app --host 0.0.0.0 --port 8000
-```
-
-Navigate to [http://localhost:8000/docs](http://localhost:8000/docs) — use the **`imagem/`** crops from **Figures 2a–2b** as ready-made payloads when iterating locally.
-
-Minimal `curl` probe (classification only — omit heavy artifacts):
-
-```bash
-curl -s -X POST "http://localhost:8000/infer?include_visualizations=false" \
-  -F "file=@imagem/anomaly_1.png" | jq
-```
-
-*(Adjust host/port/path if you deploy differently.)*
-
----
-
-## API reference
-
-### Core routes
+## API overview
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/health` | GET | Readiness (`status`: `ready` / `loading`). |
-| `/` | GET | Service metadata plus documentation anchors. |
-| `/infer` | POST | Executes reconstruction anomaly logic on an RGB upload. |
+| `/` | GET | Service banner + doc links |
+| `/health` | GET | Artifact readiness flags |
+| `/metadata` | GET | Model/categories/outputs metadata |
+| `/predict` | POST | **Primary** — multipart inference |
+| `/infer` | POST | Legacy alias (deprecated) |
 
-### `POST /infer`
+**Project name:** `visual-anomaly-inspection-api`  
+**Swagger UI:** `/docs`
 
-- **`file`** *(required)*: multipart image (`png`/`jpg`/`jpeg`).
-- **`include_visualizations`** *(query flag, defaults `true`)* toggles anomaly map artefacts.
+---
 
-Representative payload (thresholds mirrored from current JSON config):
+## Model overview
+
+| Item | Value |
+|------|-------|
+| Architecture | `DenoisingConvAutoencoder` |
+| Training | Denoising conv autoencoder, L1 loss, 256×256 RGB |
+| Score | `top_1_z_score` (mean of top 1% z-map pixels) |
+| Thresholds | Per-category, from validation (`thresholds.json`) |
+| Localization | Category-normalized reconstruction error → heatmap, mask, approximate boxes |
+
+### Supported categories
+
+`bottle` · `capsule` · `hazelnut` · `metal_nut` · `pill` · `screw` · `zipper`
+
+---
+
+## Required artifacts
+
+All inference files live under `models/mvtec_structured_objects_dae_v1/`:
+
+| File | Required at startup |
+|------|---------------------|
+| `best_model.pt` | Yes |
+| `category_error_profiles.npz` | Yes |
+| `thresholds.json` | Yes |
+| `bbox_visualization_config.json` | Yes |
+| `config.json` | Yes |
+| `manifest.json` | Optional metadata |
+| `final_metrics.json` | Optional metadata |
+| `training_history.json` | Optional metadata |
+| `error_profile_metadata.json` | Optional metadata |
+
+Startup validates:
+
+- `.pt` exists and is not a tiny Git LFS pointer  
+- Every category has `{category}_mean` / `{category}_std` in the `.npz`  
+- Every category has a threshold in `thresholds.json`
+
+> **Legacy (unused):** `models/legacy/bottle_unet_*` — old bottle-only U-Net; safe to ignore.
+
+---
+
+## Hugging Face Spaces deployment
+
+1. Create a Space → **Docker** SDK.
+2. Push this repository with **Git LFS** hydrated:
+
+   ```bash
+   git lfs install
+   git lfs pull
+   ```
+
+3. Space settings:
+   - SDK: Docker
+   - Port: **7860** (default in `Dockerfile`)
+4. Optional env vars:
+   - `CORS_ORIGINS=https://sidnei-almeida.github.io` (comma-separated)
+   - `CORS_ORIGINS=*` (default)
+
+The container only **loads** versioned weights — no training or dataset download at runtime.
+
+---
+
+## Docker (local)
+
+```bash
+git lfs pull
+
+docker build -t visual-anomaly-inspection-api .
+docker run --rm -p 7860:7860 \
+  -e CORS_ORIGINS="*" \
+  visual-anomaly-inspection-api
+```
+
+---
+
+## Local run (without Docker)
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+git lfs pull
+
+export PORT=7860
+./run_app.sh
+# or: uvicorn app:app --host 0.0.0.0 --port 7860
+```
+
+---
+
+## Example request
+
+```bash
+curl -s http://localhost:7860/health | jq
+
+curl -X POST "http://localhost:7860/predict" \
+  -F "category=bottle" \
+  -F "include_images=true" \
+  -F "include_debug=false" \
+  -F "file=@examples/bottle_anomaly.png" | jq
+```
+
+Or use the helper script:
+
+```bash
+chmod +x examples/curl_predict.sh
+./examples/curl_predict.sh
+```
+
+---
+
+## Example response (`POST /predict`)
 
 ```json
 {
-  "prediction": "Anomaly Detected",
-  "reconstruction_error": 0.00123,
-  "thresholds": {
-    "classification": 0.000205,
-    "pixel_visualization": 6,
-    "bounding_box": 15
+  "status": "anomaly",
+  "is_anomaly": true,
+  "category": "bottle",
+  "model": {
+    "experiment_name": "mvtec_structured_objects_dae_v1",
+    "model_name": "multi_product_denoising_conv_autoencoder",
+    "score_name": "top_1_z_score"
   },
-  "latency_ms": 87.421,
-  "image_size": { "width": 1024, "height": 1024 },
-  "artifacts": {
-    "anomaly_map": { "format": "PNG", "encoding": "base64", "data": "..." },
-    "binary_mask": { "format": "PNG", "encoding": "base64", "data": "..." },
-    "heatmap_overlay": { "format": "PNG", "encoding": "base64", "data": "..." },
-    "bounding_box": { "format": "PNG", "encoding": "base64", "data": "..." }
+  "scores": {
+    "anomaly_score": 5.04,
+    "threshold": 3.91,
+    "error_mean": 0.018,
+    "z_map_max": 6.72
+  },
+  "image_size": { "width": 256, "height": 256 },
+  "boxes": [
+    {
+      "x": 100, "y": 184, "w": 7, "h": 10,
+      "area": 42.0, "mean_z": 2.64, "max_z": 6.72, "score": 2.64
+    }
+  ],
+  "images": {
+    "original": "data:image/png;base64,...",
+    "reconstruction": "data:image/png;base64,...",
+    "heatmap": "data:image/png;base64,...",
+    "mask": "data:image/png;base64,..."
+  },
+  "debug": {
+    "bbox_method": "conservative_connected_components_on_z_map",
+    "localization_note": "Bounding boxes are approximate suspicious regions derived from reconstruction error maps.",
+    "latency_ms": 120.5
   }
 }
 ```
 
-Omits `"artifacts"` when `include_visualizations=false`.
+### Response images (256×256)
+
+| Field | Description |
+|-------|-------------|
+| `images.original` | Resized RGB input fed to the model |
+| `images.reconstruction` | Autoencoder output |
+| `images.heatmap` | Colored category-normalized z-map |
+| `images.mask` | Binary suspicious-region mask |
+| `images.overlay` | Optional — server-drawn boxes (`include_overlay=true`) |
+
+**Front-end:** draw rectangles from `boxes` on `images.original` (coordinates are 256×256). Overlay is optional.
 
 ---
 
-## Docker
+## Approximate bounding boxes
+
+Boxes are **heuristic regions** from reconstruction error maps — **not** supervised detection (YOLO, etc.). Use them as visual hints, not ground-truth segmentation.
+
+---
+
+## Limitations
+
+- Requires the correct `category` at inference time.
+- Fixed **256×256** processing; boxes match that coordinate system.
+- CPU by default on Hugging Face CPU Spaces (`device: cpu` in `/health`).
+- No batch endpoint; one image per request.
+- Large raw `z_map` / `error_map` arrays are not returned (use `include_debug=true` for grayscale debug images only).
+
+---
+
+## Git LFS
 
 ```bash
-docker build -t bottle-anomaly-api .
-docker run --rm -p 7860:7860 bottle-anomaly-api
+git lfs install
+git lfs pull
+git lfs ls-files
 ```
 
-Containers bind **7860** for Hugging Face parity (`PORT=7860`). Mount datasets manually if needed — default image ships without `imagem/`.
-
----
-
-## Deploying to Hugging Face Spaces
-
-1. **`git lfs install` + track `*.pth`** ahead of collaborating on weights.
-2. Push blobs + codebase with LFS manifests intact.
-3. Configure the Space as **Docker**.
-4. Keep massive checkpoints off plain Git blobs (platform blob ceiling).
-
----
-
-## Configuration
-
-[`models/bottle_unet_config.json`](models/bottle_unet_config.json) parameters:
-
-| Key | Responsibility |
-|-----|----------------|
-| `classification_threshold` | MSE cutoff for **Normal / Anomaly**. |
-| `pixel_visualization_threshold` | Unsigned int mask threshold on anomaly heatmaps. |
-| `bounding_box_threshold` | Sensitive mask cutoff prior to contours. |
-| `dilation_iterations` | Morphology passes before extracting bounding rectangles. |
-
----
-
-## Project layout
-
-```
-.
-├── header.png                 # README hero / project banner
-├── softrware.png              # Swagger / OpenAPI screenshot for docs
-├── app.py                     # FastAPI app + routes (/health, /, /infer)
-├── model_utils.py             # U-Net definition + preprocessing + artefacts
-├── models/
-│   ├── bottle_unet_best.pth   # Trained checkpoint (Git LFS)
-│   └── bottle_unet_config.json
-├── imagem/
-│   ├── 000.png                # Demo baseline (normal-looking crop)
-│   └── anomaly_*.png          # Demo defects for smoke tests / README figures
-├── notebooks/                # Offline training/analysis material
-├── training_history/
-├── GIT_LFS.md                # Clone / distro / HF notes (Git LFS)
-├── Dockerfile
-├── requirements.txt          # Torch CPU stack + FastAPI runtime
-├── requirements-gpu.txt      # Legacy exploratory Streamlit-esque stack (non-container default)
-├── run_app.sh               # Historical launcher (references Streamlit; use uvicorn instead)
-└── README.md
-```
-
----
-
-## Troubleshooting
-
-| Symptom | Likely mitigation |
-|---------|-------------------|
-| `FileNotFoundError` / microscopic checkpoint | Run `git lfs install` **before** clones when possible; inside repo run `git lfs pull`. See **[`GIT_LFS.md`](GIT_LFS.md)** & [`.gitattributes`](.gitattributes). |
-| HTTP 503 on `/infer` | Model still hydrating — hammer `/health` until `"status": "ready"`. |
-| Weird masks / hallucinated ROI | Revisit thresholds or dilation knobs in JSON. |
-| Offline demo images missing inside container | Expected — bake them in deliberately or POST from CI runner via volume mounts if ever required. |
-
----
-
-## Author
-
-| | |
-| --- | --- |
-| **Maintainer** | [Sidnei Almeida](https://github.com/sidnei-almeida) ([@sidnei-almeida](https://github.com/sidnei-almeida)) |
-| **Repository** | [github.com/sidnei-almeida/anomaly_detection_unet](https://github.com/sidnei-almeida/anomaly_detection_unet) |
-| **LinkedIn** | [linkedin.com/in/saaelmeida93](https://www.linkedin.com/in/saaelmeida93/) |
-
----
-
-## Contributing
-
-Issues & pull requests are welcome — cite **Torch + FastAPI** versions plus whether Git LFS produced real weight bytes when reporting loading failures.
+Tracked patterns (see `.gitattributes`): `*.pt`, `*.pth`, `*.npz`, `models/**`
 
 ---
 
 ## License
 
-Distributed under the [MIT License](LICENSE).
-
----
-
-<p align="center">
-  <sub>MVTec AD is curated by MVTec Software GmbH. This repository documents an academic-style reproduction harness and isn&rsquo;t affiliated with MVTec Software GmbH.</sub>
-</p>
+[MIT License](LICENSE)
